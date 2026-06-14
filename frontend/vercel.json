@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/api/tmdb/:path*", "destination": "/api/tmdb?__p=:path*" },
+    { "source": "/api/stream/info/:path*", "destination": "/api/stream-info?__p=:path*" },
+    { "source": "/((?!api/|assets/|.*\\.).*)", "destination": "/index.html" }
+  ]
+}

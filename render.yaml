@@ -1,0 +1,33 @@
+# Render Blueprint for the CINEMII FastAPI backend.
+# Deploy: Render Dashboard → New → Blueprint → pick this repo.
+# It provisions a Python web service (WebSocket-capable) + a free Postgres DB.
+
+services:
+  - type: web
+    name: cinemii-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      # JWT signing key — Render generates a strong random value once.
+      - key: CINEMII_SECRET
+        generateValue: true
+      # Postgres connection string, injected from the database below.
+      - key: CINEMII_DATABASE_URL
+        fromDatabase:
+          name: cinemii-db
+          property: connectionString
+      # Exact production frontend origin (regex below also allows *.vercel.app).
+      - key: CINEMII_ALLOWED_ORIGINS
+        value: https://frontend-delta-beryl-rmri180v1r.vercel.app
+      - key: CINEMII_ALLOWED_ORIGIN_REGEX
+        value: https://.*\.vercel\.app
+
+databases:
+  - name: cinemii-db
+    plan: free

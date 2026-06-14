@@ -22,21 +22,24 @@ const aiSearchBtn =
 const aiResults =
     document.getElementById("aiResults");
 
+function closeAI() {
+    aiModal.classList.remove("active");
+    document.body.classList.remove("modal-open");
+}
+
 export function initAIAssistant() {
 
     aiBtn?.addEventListener("click", () => {
-    window.scrollTo(0, 0);
-    aiModal.classList.add("active");
-    document.body.classList.add("modal-open");
-});
+        window.scrollTo(0, 0);
+        aiModal.classList.add("active");
+        document.body.classList.add("modal-open");
+    });
 
-    aiModal.classList.remove("active");
-document.body.classList.remove("modal-open");
+    aiClose?.addEventListener("click", closeAI);
 
     aiModal?.addEventListener("click", e => {
         if (e.target === aiModal) {
-            aiModal.classList.remove("active");
-            document.body.classList.remove("modal-open");
+            closeAI();
         }
     });
 
