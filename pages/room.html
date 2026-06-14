@@ -236,18 +236,26 @@ sendChatBtn.onclick = () => {
 
     if (!text) return;
 
-    chatMessages.insertAdjacentHTML(
-        "beforeend",
-        `
-        <div class="chat-msg self">
-            <b>You</b>
-            <p>${text}</p>
-        </div>
-        `
-    );
+    // Build the message with DOM APIs and textContent so user input is
+    // rendered as text, never parsed as HTML (prevents XSS).
+    const msg = document.createElement("div");
+    msg.className = "chat-msg self";
+
+    const who = document.createElement("b");
+    who.textContent = "You";
+
+    const body = document.createElement("p");
+    body.textContent = text;
+
+    msg.append(who, body);
+    chatMessages.appendChild(msg);
 
     chatInput.value = "";
 };
+
+chatInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") sendChatBtn.onclick();
+});
 
 </script>
 

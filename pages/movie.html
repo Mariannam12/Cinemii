@@ -21,6 +21,8 @@ import {
     BACKDROP
 } from "../assets/js/core/api.js";
 
+import { openPlayer } from "../assets/js/modules/player.js";
+
 const page =
 document.getElementById("moviePage");
 
@@ -202,11 +204,11 @@ function renderMovie(movie) {
     };
 
     document.getElementById("watchBtn").onclick = () => {
-        if (trailer) {
-            openTrailer(trailer.key);
-        } else {
-            alert("Trailer not found");
-        }
+        openPlayer({
+            mediaType,
+            mediaId: savedMovie.id,
+            title
+        });
     };
 
     document.getElementById("trailerBtn").onclick = () => {

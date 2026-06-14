@@ -1,3 +1,5 @@
+import { api, getUser, setSession, clearSession, isLoggedIn } from "../core/backend.js";
+
 const authBtn =
     document.getElementById("authBtn");
 
@@ -44,16 +46,16 @@ let mode = "signin";
 
 export function initAuth() {
 
-    const user =
-        JSON.parse(
-            localStorage.getItem("cinemii_user")
-        );
+    reflectSession();
 
-    if (user) {
-        authBtn.textContent = user.name || "Account";
-    }
-
-    authBtn?.addEventListener("click", openAuth);
+    // When signed in, clicking the button logs out; otherwise it opens auth.
+    authBtn?.addEventListener("click", () => {
+        if (isLoggedIn()) {
+            logout();
+        } else {
+            openAuth();
+        }
+    });
 
     closeBtn?.addEventListener("click", closeAuth);
 
@@ -71,13 +73,28 @@ export function initAuth() {
 
     gmailLogin?.addEventListener("click", googleRealLogin);
 
-    phoneLogin?.addEventListener("click", phoneLoginDemo);
+    phoneLogin?.addEventListener("click", phoneLoginUnavailable);
+}
+
+function reflectSession() {
+    const user = getUser();
+    if (user && isLoggedIn()) {
+        authBtn.textContent = user.name || "Account";
+        authBtn.title = "Click to log out";
+    } else {
+        authBtn.textContent = "Sign In";
+        authBtn.title = "";
+    }
+}
+
+function logout() {
+    clearSession();
+    reflectSession();
 }
 
 function openAuth() {
     window.scrollTo(0, 0);
     modal.classList.add("active");
-    document.body.classList.add("modal-open");
     document.body.classList.add("modal-open");
 }
 
@@ -105,7 +122,7 @@ function switchMode(newMode) {
             : "block";
 }
 
-function handleSubmit() {
+async function handleSubmit() {
     const email =
         authEmail.value.trim();
 
@@ -120,103 +137,42 @@ function handleSubmit() {
         return;
     }
 
-    if (password.length < 4) {
-        showMessage("Password must be at least 4 characters.", false);
+    if (mode === "signup" && password.length < 8) {
+        showMessage("Password must be at least 8 characters.", false);
         return;
     }
 
-    const users =
-        JSON.parse(
-            localStorage.getItem("cinemii_users")
-        ) || [];
+    authSubmit.disabled = true;
 
-    if (mode === "signup") {
+    try {
+        const result =
+            mode === "signup"
+                ? await api.signup(name, email, password)
+                : await api.login(email, password);
 
-        const exists =
-            users.find(u => u.email === email);
-
-        if (exists) {
-            showMessage("Account already exists. Sign in instead.", false);
-            return;
-        }
-
-        const user = {
-            name,
-            email,
-            password,
-            provider: "Email",
-            createdAt: new Date().toISOString()
-        };
-
-        users.push(user);
-
-        localStorage.setItem(
-            "cinemii_users",
-            JSON.stringify(users)
+        completeLogin(
+            result,
+            mode === "signup" ? "Account created successfully." : "Welcome back."
         );
-
-        loginUser(user);
-
-        showMessage("Account created successfully.", true);
-        return;
+    } catch (error) {
+        showMessage(error.message, false);
+    } finally {
+        authSubmit.disabled = false;
     }
-
-    const user =
-        users.find(
-            u =>
-                u.email === email &&
-                u.password === password
-        );
-
-    if (!user) {
-        showMessage("Wrong email or password.", false);
-        return;
-    }
-
-    loginUser(user);
-
-    showMessage("Welcome back.", true);
 }
 
-function socialLogin(provider) {
-    const user = {
-        name: `${provider} User`,
-        email: `${provider.toLowerCase()}@cinemii.com`,
-        provider,
-        createdAt: new Date().toISOString()
-    };
-
-    loginUser(user);
-
-    showMessage(`${provider} login connected.`, true);
+function phoneLoginUnavailable() {
+    showMessage("Phone login isn't available yet.", false);
 }
 
-function phoneLoginDemo() {
-    const phone =
-        prompt("Enter phone number:");
+// Persist the JWT + user returned by the backend and update the UI.
+function completeLogin(result, successMessage) {
+    setSession(result.access_token, result.user);
 
-    if (!phone) return;
+    authBtn.textContent = result.user.name || "Account";
+    authBtn.title = "Click to log out";
 
-    const user = {
-        name: "Phone User",
-        email: phone,
-        provider: "Phone",
-        createdAt: new Date().toISOString()
-    };
-
-    loginUser(user);
-
-    showMessage("Phone login connected.", true);
-}
-
-function loginUser(user) {
-    localStorage.setItem(
-        "cinemii_user",
-        JSON.stringify(user)
-    );
-
-    authBtn.textContent =
-        user.name || "Account";
+    showMessage(successMessage, true);
 
     setTimeout(closeAuth, 700);
 }
@@ -244,44 +200,13 @@ function googleRealLogin() {
     google.accounts.id.prompt();
 }
 
-function handleGoogleResponse(response) {
-
-    const userData =
-        parseJwt(response.credential);
-
-    const user = {
-        name: userData.name,
-        email: userData.email,
-        picture: userData.picture,
-        provider: "Google",
-        createdAt: new Date().toISOString()
-    };
-
-    loginUser(user);
-
-    showMessage("Google account connected.", true);
-}
-
-function parseJwt(token) {
-
-    const base64Url =
-        token.split(".")[1];
-
-    const base64 =
-        base64Url
-            .replace(/-/g, "+")
-            .replace(/_/g, "/");
-
-    const jsonPayload =
-        decodeURIComponent(
-            atob(base64)
-                .split("")
-                .map(c => {
-                    return "%" +
-                        ("00" + c.charCodeAt(0).toString(16)).slice(-2);
-                })
-                .join("")
-        );
-
-    return JSON.parse(jsonPayload);
+async function handleGoogleResponse(response) {
+    // The raw Google ID token is sent to our backend, which verifies its
+    // signature with Google before trusting any of its claims.
+    try {
+        const result = await api.google(response.credential);
+        completeLogin(result, "Google account connected.");
+    } catch (error) {
+        showMessage(error.message, false);
+    }
 }
