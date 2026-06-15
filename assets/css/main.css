@@ -1558,7 +1558,7 @@ min-width:280px;
 border-radius:32px;
 overflow:hidden;
 box-shadow:0 40px 90px rgba(0,0,0,.65);
-transform:rotate(2deg);
+transform:none;
 }
 
 .open-poster{
@@ -4555,4 +4555,31 @@ font-size:11px;
 color:var(--text2);
 text-align:right;
 max-width:55%;
+}
+/* FIX WHITE LINE / FLASH UNDER NAVBAR */
+
+header,
+.navbar,
+.nav,
+.top-nav,
+.app-header{
+    border-bottom:none !important;
+    box-shadow:none !important;
+    background-color:rgba(8,10,18,.78) !important;
+    backdrop-filter:blur(18px) !important;
+}
+
+header::before,
+header::after,
+.navbar::before,
+.navbar::after,
+.app-header::before,
+.app-header::after{
+    display:none !important;
+}
+html,
+body,
+#root{
+    background:#050711 !important;
+    overflow-x:hidden;
 }
