@@ -149,3 +149,95 @@ class Review(Base):
     review = Column(String(2000), nullable=True)
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+class FriendRequest(Base):
+    __tablename__ = "friend_requests"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "from_user_id",
+            "to_user_id",
+            name="uq_friend_request",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    from_user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+
+    to_user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+
+    status = Column(String(20), nullable=False, default="pending")
+    created_at = Column(DateTime, default=_utcnow)
+
+    from_user = relationship("User", foreign_keys=[from_user_id])
+    to_user = relationship("User", foreign_keys=[to_user_id])
+
+
+class Friendship(Base):
+    __tablename__ = "friendships"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "friend_id",
+            name="uq_friendship",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+
+    friend_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+
+    created_at = Column(DateTime, default=_utcnow)
+
+    user = relationship("User", foreign_keys=[user_id])
+    friend = relationship("User", foreign_keys=[friend_id])
+
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    from_user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+
+    to_user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+
+    text = Column(String(1000), nullable=False)
+
+    created_at = Column(DateTime, default=_utcnow)
+
+    from_user = relationship("User", foreign_keys=[from_user_id])
+    to_user = relationship("User", foreign_keys=[to_user_id])    
