@@ -46,6 +46,7 @@ app.include_router(stream.router)
 app.include_router(realtime.router)
 app.include_router(tmdb_proxy.router)
 app.include_router(friends.router)
+app.include_router(messages.router)
 
 
 @app.get("/api/health", tags=["meta"])
