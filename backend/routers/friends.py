@@ -27,23 +27,51 @@ def search_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    query = q.strip().lower().replace("@", "")
+    raw = q.strip().lower()
 
-    users = (
+    def compact(value):
+        return (
+            (value or "")
+            .lower()
+            .replace("@", "")
+            .replace(".", "")
+            .replace("_", "")
+            .replace("-", "")
+            .replace(" ", "")
+        )
+
+    raw_compact = compact(raw)
+
+    all_users = (
         db.query(User)
         .filter(User.id != current_user.id)
-        .filter(
-            or_(
-                User.name.ilike(f"%{query}%"),
-                User.username.ilike(f"%{query}%"),
-                User.email.ilike(f"%{query}%"),
-            )
-        )
-        .limit(20)
+        .limit(200)
         .all()
     )
 
-    return [user_card(user) for user in users]
+    results = []
+
+    for user in all_users:
+        name = user.name or ""
+        username = user.username or ""
+        email = user.email or ""
+
+        normal_match = (
+            raw in name.lower()
+            or raw in username.lower()
+            or raw in email.lower()
+        )
+
+        compact_match = (
+            raw_compact in compact(name)
+            or raw_compact in compact(username)
+            or raw_compact in compact(email)
+        )
+
+        if normal_match or compact_match:
+            results.append(user_card(user))
+
+    return results[:20]
 
 
 @router.get("")
