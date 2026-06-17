@@ -61,21 +61,7 @@ export const api = {
   twofaSetup:     ()                      => request('POST',  '/api/auth/2fa/setup',        { auth: true }),
   twofaEnable:    (code)                  => request('POST',  '/api/auth/2fa/enable',       { body: { code }, auth: true }),
   twofaDisable:   (code)                  => request('POST',  '/api/auth/2fa/disable',      { body: { code }, auth: true }),
-  twofaBackupCodes:(code)                 => request('POST',  '/api/auth/2fa/backup-codes', { body: { code }, auth: true }),
   deleteAccount:  (password)              => request('DELETE','/api/auth/account',          { body: { password }, auth: true }),
-  forgotPassword: (email)                 => request('POST',  '/api/auth/forgot-password',  { body: { email } }),
-  resetPassword:  (token, new_password)   => request('POST',  '/api/auth/reset-password',   { body: { token, new_password } }),
-
-  // Watchlist
-  listWatchlist:  ()                      => request('GET',   '/api/watchlist',             { auth: true }),
-  addWatchlist:   (data)                  => request('POST',  '/api/watchlist',             { body: data, auth: true }),
-  removeWatchlist:(type, id)              => request('DELETE',`/api/watchlist/${type}/${id}`,{ auth: true }),
-
-  // Reviews / ratings
-  myReviews:      ()                      => request('GET',   '/api/reviews',               { auth: true }),
-  getReview:      (type, id)              => request('GET',   `/api/reviews/${type}/${id}`, { auth: true }),
-  saveReview:     (data)                  => request('POST',  '/api/reviews',               { body: data, auth: true }),
-  deleteReview:   (type, id)              => request('DELETE',`/api/reviews/${type}/${id}`, { auth: true }),
 
   streamInfo:     (type, id)              => request('GET',  `/api/stream/info/${type}/${id}`, { auth: true }),
 
@@ -86,6 +72,32 @@ export const api = {
   listFavorites:  ()                      => request('GET',  '/api/favorites',                     { auth: true }),
   addFavorite:    (data)                  => request('POST', '/api/favorites',                      { body: data, auth: true }),
   removeFavorite: (type, id)              => request('DELETE', `/api/favorites/${type}/${id}`,      { auth: true }),
+  // Watchlist
+  listWatchlist:   ()        => request('GET',    '/api/watchlist',                 { auth: true }),
+  addWatchlist:    (data)    => request('POST',   '/api/watchlist',                 { body: data, auth: true }),
+  removeWatchlist: (type, id) => request('DELETE', `/api/watchlist/${type}/${id}`,  { auth: true }),
+
+  // Watchlist
+  listWatchlist:   ()         => request('GET',    '/api/watchlist',                { auth: true }),
+  addWatchlist:    (data)     => request('POST',   '/api/watchlist',                { body: data, auth: true }),
+  removeWatchlist: (type, id) => request('DELETE', `/api/watchlist/${type}/${id}`,  { auth: true }),
+
+    // Friends
+  listFriends:          ()        => request('GET',  '/api/friends',               { auth: true }),
+  searchUsers:          (q)       => request('GET',  `/api/friends/search?q=${encodeURIComponent(q)}`, { auth: true }),
+  sendFriendRequest:    (userId)  => request('POST', `/api/friends/request/${userId}`, { auth: true }),
+  listFriendRequests:   ()        => request('GET',  '/api/friends/requests',      { auth: true }),
+  acceptFriendRequest:  (id)      => request('POST', `/api/friends/accept/${id}`,  { auth: true }),
+  rejectFriendRequest:  (id)      => request('POST', `/api/friends/reject/${id}`,  { auth: true }),
+
+  // Reviews
+  getReview:    (type, id) => request('GET',  `/api/reviews/${type}/${id}`, { auth: true }),
+  saveReview:   (data)     => request('POST', '/api/reviews',               { body: data, auth: true }),
+  deleteReview: (type, id) => request('DELETE', `/api/reviews/${type}/${id}`, { auth: true }),
+
+  // Messages
+  listMessages: (friendId) => request('GET', `/api/messages/${friendId}`, { auth: true }),
+  sendMessage:  (friendId, text) => request('POST', `/api/messages/${friendId}`, { body: { text }, auth: true }),
 
   listRooms:      ()                      => request('GET',  '/api/rooms'),
 };
