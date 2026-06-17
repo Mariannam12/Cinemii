@@ -99,30 +99,32 @@ export function Profile() {
     }
   };
 
-  const searchUsers = async () => {
-    const q = searchQuery.trim();
+const searchUsers = async () => {
+  const q = searchQuery.trim();
 
-    if (!q) {
-      setSearchResults([]);
-      setHasSearched(false);
-      setSearchError('');
-      return;
-    }
-
-    setSearching(true);
-    setHasSearched(true);
+  if (!q) {
+    setSearchResults([]);
+    setHasSearched(false);
     setSearchError('');
+    return;
+  }
 
-    try {
-      const users = await api.searchUsers(q);
-      setSearchResults(users || []);
-    } catch (err) {
-      setSearchResults([]);
-      setSearchError(err.message || 'Search failed');
-    } finally {
-      setSearching(false);
-    }
-  };
+  setSearching(true);
+  setHasSearched(true);
+  setSearchError('');
+
+  try {
+    const result = await api.searchUsers(q);
+    console.log('SEARCH RESULT:', result);
+    setSearchResults(Array.isArray(result) ? result : []);
+  } catch (err) {
+    console.error('SEARCH ERROR:', err);
+    setSearchResults([]);
+    setSearchError(err.message || 'Search failed');
+  } finally {
+    setSearching(false);
+  }
+};
 
   const addFriend = async (userId) => {
     try {
