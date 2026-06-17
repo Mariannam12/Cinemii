@@ -17,6 +17,7 @@ export function AuthModal({ onClose }) {
   const [password, setPassword]     = useState('');
   const [twofa, setTwofa]           = useState(false); // 2FA code step
   const [otp, setOtp]               = useState('');
+  const [forgot, setForgot]         = useState(false); // forgot-password step
 
   // Google Sign-In button
   useEffect(() => {
@@ -59,6 +60,20 @@ export function AuthModal({ onClose }) {
     };
   }, [onClose]);
 
+  const handleForgot = async (e) => {
+    e.preventDefault();
+    setMsg(null);
+    setLoading(true);
+    try {
+      const res = await api.forgotPassword(email.trim());
+      setMsg({ text: res.message || 'If that email exists, a reset link has been sent.', ok: true });
+    } catch (e) {
+      setMsg({ text: e.message, ok: false });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMsg(null);
@@ -90,10 +105,10 @@ export function AuthModal({ onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-overlay"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="glass-dark w-full max-w-md rounded-2xl p-8 shadow-2xl relative">
+      <div className="glass-dark w-full max-w-md rounded-3xl p-8 shadow-2xl relative animate-pop">
         {/* Close */}
         <button
           onClick={onClose}
@@ -109,8 +124,8 @@ export function AuthModal({ onClose }) {
           <p className="text-muted text-sm mt-1">Your cinema, your rules</p>
         </div>
 
-        {/* Tabs (hidden during 2FA step) */}
-        {!twofa && (
+        {/* Tabs (hidden during 2FA / forgot steps) */}
+        {!twofa && !forgot && (
           <div className="flex rounded-xl bg-surface p-1 mb-6">
             {['signin', 'signup'].map((t) => (
               <button
@@ -126,8 +141,8 @@ export function AuthModal({ onClose }) {
           </div>
         )}
 
-        {/* Google + divider (hidden during 2FA step) */}
-        {!twofa && (
+        {/* Google + divider (hidden during 2FA / forgot steps) */}
+        {!twofa && !forgot && (
           <>
             <div ref={googleBtnRef} className="w-full mb-4" />
             <div className="flex items-center gap-3 mb-4">
@@ -139,24 +154,40 @@ export function AuthModal({ onClose }) {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          {twofa ? (
+        <form onSubmit={forgot ? handleForgot : handleSubmit} className="flex flex-col gap-3">
+          {forgot ? (
+            <>
+              <div className="text-center mb-1">
+                <p className="text-white font-semibold">Reset your password</p>
+                <p className="text-muted text-xs mt-1">Enter your email and we'll send a reset link.</p>
+              </div>
+              <input
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoFocus
+                required
+                className="w-full glass rounded-xl px-4 py-3 text-white placeholder:text-muted text-sm focus:outline-none focus:border-accent/60 border border-transparent transition"
+              />
+            </>
+          ) : twofa ? (
             <>
               <div className="text-center mb-1">
                 <p className="text-white font-semibold">Two-factor verification</p>
-                <p className="text-muted text-xs mt-1">Open your authenticator app and enter the 6-digit code.</p>
+                <p className="text-muted text-xs mt-1">Enter the 6-digit code from your authenticator app (or a backup code).</p>
               </div>
               <input
                 type="text"
                 inputMode="numeric"
                 autoComplete="one-time-code"
-                maxLength={6}
+                maxLength={10}
                 placeholder="000000"
                 value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                onChange={(e) => setOtp(e.target.value)}
                 autoFocus
                 required
-                className="w-full glass rounded-xl px-4 py-3 text-white placeholder:text-muted text-center text-2xl tracking-[0.5em] font-bold focus:outline-none focus:border-accent/60 border border-transparent transition"
+                className="w-full glass rounded-xl px-4 py-3 text-white placeholder:text-muted text-center text-2xl tracking-[0.4em] font-bold focus:outline-none focus:border-accent/60 border border-transparent transition"
               />
             </>
           ) : (
@@ -187,6 +218,11 @@ export function AuthModal({ onClose }) {
                 required
                 className="w-full glass rounded-xl px-4 py-3 text-white placeholder:text-muted text-sm focus:outline-none focus:border-accent/60 border border-transparent transition"
               />
+              {tab === 'signin' && (
+                <button type="button" onClick={() => { setForgot(true); setMsg(null); }} className="text-muted text-xs hover:text-accent transition text-right">
+                  Forgot password?
+                </button>
+              )}
             </>
           )}
 
@@ -201,13 +237,13 @@ export function AuthModal({ onClose }) {
             disabled={loading}
             className="w-full gradient-accent text-white font-bold py-3 rounded-xl hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-1"
           >
-            {loading ? 'Please wait…' : twofa ? 'Verify' : tab === 'signin' ? 'Sign In' : 'Create Account'}
+            {loading ? 'Please wait…' : forgot ? 'Send reset link' : twofa ? 'Verify' : tab === 'signin' ? 'Sign In' : 'Create Account'}
           </button>
 
-          {twofa && (
+          {(twofa || forgot) && (
             <button
               type="button"
-              onClick={() => { setTwofa(false); setOtp(''); setMsg(null); }}
+              onClick={() => { setTwofa(false); setForgot(false); setOtp(''); setMsg(null); }}
               className="text-muted text-xs hover:text-white transition"
             >
               ← Back to sign in

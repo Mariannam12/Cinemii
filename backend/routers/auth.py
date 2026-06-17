@@ -12,6 +12,7 @@ from security import (
     create_access_token,
     hash_password,
     verify_2fa,
+    verify_and_consume_backup_code,
     verify_password,
 )
 
@@ -68,10 +69,18 @@ def login(body: LoginIn, db: Session = Depends(get_db)):
         if not body.otp_code:
             # Signal the client to collect a code, without issuing a token.
             return {"requires_2fa": True}
-        if not verify_2fa(user.two_factor_secret, body.otp_code):
+        code = body.otp_code.strip()
+        # Accept either a TOTP code or a one-time backup/recovery code.
+        ok = verify_2fa(user.two_factor_secret, code)
+        if not ok:
+            ok, new_codes = verify_and_consume_backup_code(user.backup_codes, code)
+            if ok:
+                user.backup_codes = new_codes
+                db.commit()
+        if not ok:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid two-factor code.",
+                detail="Invalid two-factor or backup code.",
             )
 
     return _issue(user)

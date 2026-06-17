@@ -2,6 +2,8 @@
 
 import base64
 import io
+import json
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -82,3 +84,55 @@ def qr_svg_data_uri(uri: str) -> str:
     img.save(buf)
     encoded = base64.b64encode(buf.getvalue()).decode("ascii")
     return f"data:image/svg+xml;base64,{encoded}"
+
+
+# --- 2FA backup / recovery codes --------------------------------------------
+
+def generate_backup_codes(n: int = 10) -> tuple[list[str], str]:
+    """Return (plaintext codes to show once, JSON of bcrypt hashes to store)."""
+    codes = []
+    for _ in range(n):
+        raw = secrets.token_hex(4).upper()  # 8 hex chars
+        codes.append(f"{raw[:4]}-{raw[4:]}")
+    hashes = [hash_password(c) for c in codes]
+    return codes, json.dumps(hashes)
+
+
+def verify_and_consume_backup_code(stored_json: Optional[str], code: str):
+    """Check a backup code; if valid, return (True, new_json_without_it)."""
+    if not stored_json or not code:
+        return False, stored_json
+    try:
+        hashes = json.loads(stored_json)
+    except (ValueError, TypeError):
+        return False, stored_json
+    normalized = code.strip().upper()
+    for h in hashes:
+        if verify_password(normalized, h):
+            hashes.remove(h)  # one-time use
+            return True, json.dumps(hashes)
+    return False, stored_json
+
+
+# --- Password reset tokens ---------------------------------------------------
+
+def create_reset_token(user_id: int, minutes: int = 15) -> str:
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": str(user_id),
+        "purpose": "reset",
+        "iat": now,
+        "exp": now + timedelta(minutes=minutes),
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=JWT_ALGORITHM)
+
+
+def decode_reset_token(token: str) -> Optional[int]:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[JWT_ALGORITHM])
+    except jwt.PyJWTError:
+        return None
+    if payload.get("purpose") != "reset":
+        return None
+    sub = payload.get("sub")
+    return int(sub) if sub and str(sub).isdigit() else None

@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Play, Bell, User, LogOut, Menu, X, Tv, Star, Users, MessageCircle, Search, Settings } from 'lucide-react';
+import { Play, Bell, User, LogOut, Menu, X, Tv, Star, Users, MessageCircle, Search, Settings, Sparkles } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthModal } from '../auth/AuthModal';
 import { HeaderSearch } from './HeaderSearch';
 import { SearchOverlay } from '../search/SearchOverlay';
 import { NotificationPanel } from './NotificationPanel';
 import { CommunityChat } from '../chat/CommunityChat';
+import { MoodRecommender } from '../ai/MoodRecommender';
+import { buildNotifications, countUnread } from '../../core/notifications';
 
 const NAV = [
   { label: 'Home',      path: '/' },
@@ -23,7 +25,9 @@ export function Navbar() {
   const [showAuth,   setShowAuth]     = useState(false);
   const [showNotifs, setShowNotifs]   = useState(false);
   const [showChat,   setShowChat]     = useState(false);
+  const [showMood,   setShowMood]     = useState(false);
   const [showSearch, setShowSearch]   = useState(false); // mobile overlay
+  const [unread,     setUnread]       = useState(0);
   const [menuOpen,   setMenuOpen]     = useState(false);
   const [scrolled,   setScrolled]     = useState(false);
 
@@ -34,6 +38,12 @@ export function Navbar() {
   }, []);
 
   useEffect(() => { setMenuOpen(false); }, [location.pathname]);
+
+  // Real unread count for the bell dot.
+  const refreshUnread = useCallback(() => {
+    buildNotifications().then(list => setUnread(countUnread(list))).catch(() => {});
+  }, []);
+  useEffect(() => { refreshUnread(); }, [refreshUnread, loggedIn]);
 
   const isActive = (path) => path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
 
@@ -91,6 +101,15 @@ export function Navbar() {
               <Search size={17} />
             </button>
 
+            {/* AI mood picker */}
+            <button
+              onClick={() => setShowMood(true)}
+              className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-full gradient-accent text-white text-sm font-semibold hover:opacity-90 transition ring-1 ring-accent/30"
+              aria-label="AI recommendations"
+            >
+              <Sparkles size={15} /> For You
+            </button>
+
             {/* Chat */}
             <button
               onClick={() => setShowChat(c => !c)}
@@ -112,9 +131,9 @@ export function Navbar() {
                 aria-label="Notifications"
               >
                 <Bell size={17} />
-                <span className="absolute top-1.5 right-2 w-1.5 h-1.5 bg-accent rounded-full ring-2 ring-bg" />
+                {unread > 0 && <span className="absolute top-1.5 right-2 w-1.5 h-1.5 bg-accent rounded-full ring-2 ring-bg" />}
               </button>
-              {showNotifs && <NotificationPanel onClose={() => setShowNotifs(false)} />}
+              {showNotifs && <NotificationPanel onClose={() => setShowNotifs(false)} onRead={refreshUnread} />}
             </div>
 
             {/* Profile / Auth */}
@@ -176,6 +195,7 @@ export function Navbar() {
       {showAuth   && <AuthModal onClose={() => setShowAuth(false)} />}
       {showSearch && <SearchOverlay onClose={() => setShowSearch(false)} />}
       {showChat   && <CommunityChat onClose={() => setShowChat(false)} />}
+      {showMood   && <MoodRecommender onClose={() => setShowMood(false)} />}
     </>
   );
 }

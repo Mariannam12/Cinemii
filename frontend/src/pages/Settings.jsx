@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api, getToken } from '../core/backend';
+import { AvatarUpload } from '../components/settings/AvatarUpload';
 
 function Section({ icon: Icon, title, desc, children }) {
   return (
@@ -49,6 +50,7 @@ export function Settings() {
   const { user, loggedIn, login, logout } = useAuth();
   const navigate = useNavigate();
   const [ready, setReady] = useState(false);
+  const [tab, setTab]     = useState('profile');
 
   useEffect(() => {
     if (!loggedIn) { navigate('/'); return; }
@@ -64,21 +66,51 @@ export function Settings() {
 
   const refresh = (updated) => login(getToken(), updated);
 
+  const NAV = [
+    { key: 'profile',  label: 'Profile',       icon: User },
+    { key: 'email',    label: 'Email',         icon: Mail },
+    { key: 'password', label: 'Password',      icon: Lock },
+    { key: '2fa',      label: 'Two-Factor',    icon: ShieldCheck },
+    { key: 'danger',   label: 'Delete account', icon: Trash2 },
+  ];
+
   return (
     <div className="min-h-screen pt-24 pb-20">
-      <div className="max-w-2xl mx-auto px-6">
+      <div className="max-w-5xl mx-auto px-6">
         <button onClick={() => navigate('/profile')} className="flex items-center gap-2 text-muted hover:text-white transition text-sm mb-6">
           <ArrowLeft size={15} /> Back to profile
         </button>
         <h1 className="text-3xl font-black text-white mb-1">Account Settings</h1>
         <p className="text-muted text-sm mb-8">Manage your profile, security, and account.</p>
 
-        <div className="flex flex-col gap-5">
-          <ProfileSection user={user} onSaved={refresh} />
-          <EmailSection user={user} onSaved={refresh} />
-          <PasswordSection user={user} onSaved={refresh} />
-          <TwoFactorSection user={user} onSaved={refresh} />
-          <DangerSection user={user} onDeleted={() => { logout(); navigate('/'); }} />
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Sidebar nav */}
+          <nav className="md:w-56 flex-shrink-0">
+            <div className="flex md:flex-col gap-1 overflow-x-auto hide-scrollbar md:sticky md:top-24">
+              {NAV.map(({ key, label, icon: Icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setTab(key)}
+                  className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition flex-shrink-0 ${
+                    tab === key
+                      ? key === 'danger' ? 'bg-red-500/15 text-red-400' : 'gradient-accent text-white shadow-lg shadow-accent/20'
+                      : 'text-muted hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Icon size={16} /> {label}
+                </button>
+              ))}
+            </div>
+          </nav>
+
+          {/* Active section */}
+          <div className="flex-1 min-w-0 max-w-2xl">
+            {tab === 'profile'  && <ProfileSection  user={user} onSaved={refresh} />}
+            {tab === 'email'    && <EmailSection    user={user} onSaved={refresh} />}
+            {tab === 'password' && <PasswordSection user={user} onSaved={refresh} />}
+            {tab === '2fa'      && <TwoFactorSection user={user} onSaved={refresh} />}
+            {tab === 'danger'   && <DangerSection   user={user} onDeleted={() => { logout(); navigate('/'); }} />}
+          </div>
         </div>
       </div>
     </div>
@@ -110,14 +142,14 @@ function ProfileSection({ user, onSaved }) {
   return (
     <Section icon={User} title="Profile" desc="Your public details.">
       <div className="flex flex-col gap-3">
-        <label className="text-muted text-xs">Display name</label>
+        <label className="text-muted text-xs">Profile picture</label>
+        <AvatarUpload value={picture} onChange={setPic} name={name} />
+        <label className="text-muted text-xs mt-1">Display name</label>
         <Field icon={User} value={name} onChange={e => setName(e.target.value)} placeholder="Your name" />
         <label className="text-muted text-xs">Username</label>
         <Field icon={AtSign} value={username} onChange={e => setU(e.target.value.replace(/[^a-zA-Z0-9_.]/g, ''))} placeholder="unique_handle" />
         <label className="text-muted text-xs">Date of birth</label>
         <Field icon={Calendar} type="date" value={dob} onChange={e => setDob(e.target.value)} />
-        <label className="text-muted text-xs">Avatar URL</label>
-        <Field icon={ImageIcon} value={picture} onChange={e => setPic(e.target.value)} placeholder="https://…" />
         <label className="text-muted text-xs">Bio</label>
         <div className="relative">
           <FileText size={15} className="absolute left-3.5 top-3 text-muted" />
@@ -206,6 +238,20 @@ function PasswordSection({ user, onSaved }) {
   );
 }
 
+function BackupCodes({ codes }) {
+  const copy = () => navigator.clipboard?.writeText(codes.join('\n'));
+  return (
+    <div className="glass rounded-xl p-4 border border-accent/20">
+      <p className="text-white text-sm font-semibold mb-1">Save your backup codes</p>
+      <p className="text-muted text-xs mb-3">Each works once if you lose your authenticator. Store them somewhere safe — you won't see them again.</p>
+      <div className="grid grid-cols-2 gap-1.5 font-mono text-sm text-white mb-3">
+        {codes.map(c => <span key={c} className="glass rounded px-2 py-1 text-center select-all">{c}</span>)}
+      </div>
+      <button onClick={copy} className="glass text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-white/10 transition">Copy all</button>
+    </div>
+  );
+}
+
 function TwoFactorSection({ user, onSaved }) {
   const enabled = user.two_factor_enabled;
   const [setup, setSetup]   = useState(null); // { secret, qr_svg }
@@ -213,6 +259,8 @@ function TwoFactorSection({ user, onSaved }) {
   const [busy, setBusy]     = useState(false);
   const [msg, setMsg]       = useState(null);
   const [disabling, setDis] = useState(false);
+  const [codes, setCodes]   = useState(null); // backup codes to show once
+  const [regen, setRegen]   = useState(false);
 
   const startSetup = async () => {
     setBusy(true); setMsg(null);
@@ -224,9 +272,20 @@ function TwoFactorSection({ user, onSaved }) {
   const enable = async () => {
     setBusy(true); setMsg(null);
     try {
-      const updated = await api.twofaEnable(code.trim());
-      onSaved(updated); setSetup(null); setCode('');
+      const res = await api.twofaEnable(code.trim());
+      onSaved(res.user); setSetup(null); setCode('');
+      setCodes(res.backup_codes);
       setMsg({ ok: true, text: 'Two-factor authentication enabled.' });
+    } catch (e) { setMsg({ ok: false, text: e.message }); }
+    finally { setBusy(false); }
+  };
+
+  const regenerate = async () => {
+    setBusy(true); setMsg(null);
+    try {
+      const res = await api.twofaBackupCodes(code.trim());
+      setCodes(res.backup_codes); setRegen(false); setCode('');
+      setMsg({ ok: true, text: 'New backup codes generated.' });
     } catch (e) { setMsg({ ok: false, text: e.message }); }
     finally { setBusy(false); }
   };
@@ -248,23 +307,35 @@ function TwoFactorSection({ user, onSaved }) {
       desc="Protect your account with an authenticator app (Google Authenticator, Authy…)."
     >
       {enabled ? (
-        <div>
-          <div className="flex items-center gap-2 text-green-400 text-sm font-semibold mb-4">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2 text-green-400 text-sm font-semibold">
             <ShieldCheck size={16} /> 2FA is ON
           </div>
-          {!disabling ? (
-            <button onClick={() => { setDis(true); setMsg(null); }} className="glass text-accent border border-accent/20 text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-accent/10 transition">
-              Disable 2FA
-            </button>
-          ) : (
+
+          {codes && <BackupCodes codes={codes} />}
+
+          <div className="flex flex-wrap gap-2">
+            {!disabling && !regen && (
+              <>
+                <button onClick={() => { setRegen(true); setMsg(null); setCodes(null); }} className="glass text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-white/10 transition">
+                  Regenerate backup codes
+                </button>
+                <button onClick={() => { setDis(true); setMsg(null); }} className="glass text-accent border border-accent/20 text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-accent/10 transition">
+                  Disable 2FA
+                </button>
+              </>
+            )}
+          </div>
+
+          {(disabling || regen) && (
             <div className="flex flex-col gap-3 max-w-xs">
               <p className="text-muted text-xs">Enter a current code to confirm:</p>
               <Field value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ''))} placeholder="6-digit code" maxLength={6} inputMode="numeric" />
               <div className="flex gap-2">
-                <button onClick={disable} disabled={busy || code.length < 6} className={btn}>
-                  {busy ? <Loader2 size={15} className="animate-spin" /> : null} Confirm disable
+                <button onClick={disabling ? disable : regenerate} disabled={busy || code.length < 6} className={btn}>
+                  {busy ? <Loader2 size={15} className="animate-spin" /> : null} {disabling ? 'Confirm disable' : 'Generate new codes'}
                 </button>
-                <button onClick={() => { setDis(false); setCode(''); }} className="text-muted text-sm hover:text-white px-3">Cancel</button>
+                <button onClick={() => { setDis(false); setRegen(false); setCode(''); }} className="text-muted text-sm hover:text-white px-3">Cancel</button>
               </div>
             </div>
           )}

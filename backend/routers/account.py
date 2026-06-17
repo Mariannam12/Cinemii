@@ -5,20 +5,29 @@ import re
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from config import FRONTEND_URL
 from database import get_db
 from deps import get_current_user
+from mailer import send_email
 from models import User
 from schemas import (
+    BackupCodesOut,
     DeleteAccountIn,
     EmailChangeIn,
+    ForgotPasswordIn,
     PasswordChangeIn,
     ProfileUpdateIn,
+    ResetPasswordIn,
     TwoFACodeIn,
+    TwoFAEnableOut,
     TwoFASetupOut,
     UserOut,
 )
 from security import (
+    create_reset_token,
+    decode_reset_token,
     generate_2fa_secret,
+    generate_backup_codes,
     hash_password,
     qr_svg_data_uri,
     totp_uri,
@@ -132,7 +141,7 @@ def twofa_setup(
     return TwoFASetupOut(secret=secret, otpauth_uri=uri, qr_svg=qr_svg_data_uri(uri))
 
 
-@router.post("/2fa/enable", response_model=UserOut)
+@router.post("/2fa/enable", response_model=TwoFAEnableOut)
 def twofa_enable(
     body: TwoFACodeIn,
     db: Session = Depends(get_db),
@@ -143,9 +152,29 @@ def twofa_enable(
     if not verify_2fa(current.two_factor_secret, body.code):
         raise HTTPException(400, "That code is incorrect. Try again.")
     current.two_factor_enabled = True
+    plaintext, hashed_json = generate_backup_codes()
+    current.backup_codes = hashed_json
     db.commit()
     db.refresh(current)
-    return current
+    # Plaintext codes are shown exactly once, here.
+    return TwoFAEnableOut(user=UserOut.model_validate(current), backup_codes=plaintext)
+
+
+@router.post("/2fa/backup-codes", response_model=BackupCodesOut)
+def regenerate_backup_codes(
+    body: TwoFACodeIn,
+    db: Session = Depends(get_db),
+    current: User = Depends(get_current_user),
+):
+    """Issue a fresh set of recovery codes (invalidates the old ones)."""
+    if not current.two_factor_enabled:
+        raise HTTPException(400, "Two-factor is not enabled.")
+    if not verify_2fa(current.two_factor_secret, body.code):
+        raise HTTPException(400, "That code is incorrect.")
+    plaintext, hashed_json = generate_backup_codes()
+    current.backup_codes = hashed_json
+    db.commit()
+    return BackupCodesOut(backup_codes=plaintext)
 
 
 @router.post("/2fa/disable", response_model=UserOut)
@@ -160,6 +189,7 @@ def twofa_disable(
         raise HTTPException(400, "That code is incorrect.")
     current.two_factor_enabled = False
     current.two_factor_secret = None
+    current.backup_codes = None
     db.commit()
     db.refresh(current)
     return current
@@ -180,3 +210,39 @@ def delete_account(
     db.delete(current)
     db.commit()
     return None
+
+
+# --- Password reset (no auth) -----------------------------------------------
+
+@router.post("/forgot-password")
+def forgot_password(body: ForgotPasswordIn, db: Session = Depends(get_db)):
+    """Email a reset link. Always returns 200 so we don't leak which emails exist."""
+    email = body.email.lower().strip()
+    user = db.query(User).filter(User.email == email).first()
+    if user and user.hashed_password:
+        token = create_reset_token(user.id)
+        link = f"{FRONTEND_URL}/reset-password?token={token}"
+        send_email(
+            to=user.email,
+            subject="Reset your Cinemii password",
+            body=(
+                f"Hi {user.name},\n\n"
+                f"Use this link to reset your password (valid 15 minutes):\n{link}\n\n"
+                "If you didn't request this, you can ignore this email."
+            ),
+        )
+    return {"ok": True, "message": "If that email exists, a reset link has been sent."}
+
+
+@router.post("/reset-password", response_model=UserOut)
+def reset_password(body: ResetPasswordIn, db: Session = Depends(get_db)):
+    user_id = decode_reset_token(body.token)
+    if not user_id:
+        raise HTTPException(400, "This reset link is invalid or has expired.")
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(400, "This reset link is invalid or has expired.")
+    user.hashed_password = hash_password(body.new_password)
+    db.commit()
+    db.refresh(user)
+    return user

@@ -10,6 +10,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
@@ -32,12 +33,15 @@ class User(Base):
     # Nullable: OAuth (Google) users never set a local password.
     hashed_password = Column(String(255), nullable=True)
     provider = Column(String(40), nullable=False, default="Email")
-    picture = Column(String(512), nullable=True)
+    # Text (not VARCHAR) so it can hold an uploaded avatar as a data URI.
+    picture = Column(Text, nullable=True)
     bio = Column(String(300), nullable=True)
     date_of_birth = Column(String(10), nullable=True)  # ISO 'YYYY-MM-DD'
     # TOTP two-factor (Google Authenticator compatible).
     two_factor_enabled = Column(Boolean, nullable=False, default=False)
     two_factor_secret = Column(String(64), nullable=True)
+    # JSON array of bcrypt-hashed one-time recovery codes.
+    backup_codes = Column(String(2000), nullable=True)
     created_at = Column(DateTime, default=_utcnow)
 
     progress = relationship(
@@ -86,3 +90,36 @@ class Favorite(Base):
     created_at = Column(DateTime, default=_utcnow)
 
     user = relationship("User", back_populates="favorites")
+
+
+class WatchlistItem(Base):
+    __tablename__ = "watchlist"
+    __table_args__ = (
+        UniqueConstraint("user_id", "media_type", "media_id", name="uq_watchlist"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    media_type = Column(String(10), nullable=False, default="movie")
+    media_id = Column(String(32), nullable=False)
+    title = Column(String(300), nullable=True)
+    poster_path = Column(String(300), nullable=True)
+    created_at = Column(DateTime, default=_utcnow)
+
+
+class Review(Base):
+    __tablename__ = "reviews"
+    __table_args__ = (
+        UniqueConstraint("user_id", "media_type", "media_id", name="uq_review"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    media_type = Column(String(10), nullable=False, default="movie")
+    media_id = Column(String(32), nullable=False)
+    title = Column(String(300), nullable=True)
+    poster_path = Column(String(300), nullable=True)
+    rating = Column(Float, nullable=False, default=0.0)   # 0.5–5 stars
+    review = Column(String(2000), nullable=True)
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)

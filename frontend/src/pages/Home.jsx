@@ -8,6 +8,7 @@ import { Hero } from '../components/home/Hero';
 import { MovieSection } from '../components/home/MovieSection';
 import { RankedRow } from '../components/home/RankedRow';
 import { LiveStreams } from '../components/home/LiveStreams';
+import { ContinueWatching } from '../components/home/ContinueWatching';
 import { CinemaPlayer } from '../components/player/CinemaPlayer';
 import { useTMDB } from '../hooks/useTMDB';
 import { useLazyTMDB } from '../hooks/useLazyTMDB';
@@ -70,6 +71,8 @@ export function Home() {
       <Hero movies={slice(trending.data, 8)} loading={trending.loading} onWatchClick={handleWatch} />
 
       <div className="max-w-screen-2xl mx-auto px-6 md:px-10 pb-24 flex flex-col gap-10 mt-10">
+
+        {loggedIn && <ContinueWatching onWatchClick={handleWatch} />}
 
         <LiveStreams />
 

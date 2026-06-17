@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Play, Heart, Clapperboard, Star, Clock, Calendar, Tag, User } from 'lucide-react';
+import { ArrowLeft, Play, Heart, Clapperboard, Star, Clock, Calendar, Tag, User, Bookmark, BookmarkCheck } from 'lucide-react';
 import { fetchMovie, fetchTV, imgUrl, backdropUrl } from '../core/tmdb';
 import { useFavorites } from '../contexts/FavoritesContext';
+import { useToast } from '../contexts/ToastContext';
+import { api, isLoggedIn } from '../core/backend';
 import { MovieSection } from '../components/home/MovieSection';
 import { CinemaPlayer } from '../components/player/CinemaPlayer';
 import { TrailerModal } from '../components/player/TrailerModal';
 import { SeasonPicker } from '../components/movie/SeasonPicker';
+import { RatingReview } from '../components/movie/RatingReview';
 import { Skeleton } from '../components/ui/Skeleton';
 
 function Badge({ children, className = '' }) {
@@ -24,11 +27,13 @@ export function Movie() {
   const isTV      = loc.pathname.startsWith('/tv/');
   const mediaType = isTV ? 'tv' : 'movie';
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { success, error: toastError } = useToast();
 
-  const [movie,   setMovie]   = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [player,  setPlayer]  = useState(false);
-  const [trailer, setTrailer] = useState(null);
+  const [movie,    setMovie]    = useState(null);
+  const [loading,  setLoading]  = useState(true);
+  const [player,   setPlayer]   = useState(false);
+  const [trailer,  setTrailer]  = useState(null);
+  const [inWatchlist, setInWL]  = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -37,6 +42,23 @@ export function Movie() {
     const fetcher = isTV ? fetchTV : fetchMovie;
     fetcher(id).then(setMovie).catch(console.error).finally(() => setLoading(false));
   }, [id, isTV]);
+
+  // Initial watchlist membership
+  useEffect(() => {
+    if (!isLoggedIn()) { setInWL(false); return; }
+    api.listWatchlist()
+      .then(list => setInWL((list || []).some(w => String(w.media_id) === String(id) && w.media_type === mediaType)))
+      .catch(() => {});
+  }, [id, mediaType]);
+
+  const toggleWatchlist = async () => {
+    if (!isLoggedIn()) return;
+    try {
+      if (inWatchlist) { await api.removeWatchlist(mediaType, id); success('Removed from your watchlist'); }
+      else { await api.addWatchlist({ media_type: mediaType, media_id: String(id), title: movie.title || movie.name, poster_path: movie.poster_path }); success('Added to your watchlist'); }
+      setInWL(v => !v);
+    } catch { toastError('Could not update watchlist.'); }
+  };
 
   if (loading) return <DetailSkeleton />;
   if (!movie)  return <div className="min-h-screen flex items-center justify-center text-muted">Not found.</div>;
@@ -136,9 +158,20 @@ export function Movie() {
               >
                 <Heart size={17} fill={favd ? 'currentColor' : 'none'} /> {favd ? 'Saved' : 'Favorite'}
               </button>
+              {isLoggedIn() && (
+                <button
+                  onClick={toggleWatchlist}
+                  className={`glass font-semibold px-5 py-3 rounded-xl transition-all active:scale-95 flex items-center gap-2 ${inWatchlist ? 'text-accent border border-accent/40' : 'text-white hover:bg-white/10'}`}
+                >
+                  {inWatchlist ? <BookmarkCheck size={17} /> : <Bookmark size={17} />} {inWatchlist ? 'In Watchlist' : 'Watchlist'}
+                </button>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Rating & review */}
+        <RatingReview mediaType={mediaType} mediaId={id} title={movie.title || movie.name} posterPath={movie.poster_path} />
 
         {/* TV seasons / episodes */}
         {isTV && seasons.length > 0 && (
