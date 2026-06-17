@@ -8,6 +8,7 @@ import { Room } from './pages/Room';
 import { Search } from './pages/Search';
 import { Genre } from './pages/Genre';
 import { Settings } from './pages/Settings';
+import { ResetPassword } from './pages/ResetPassword';
 import { Movies, TVShows, TopRated } from './pages/Browse';
 
 function NotFound() {
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="/top-rated"   element={<TopRated />} />
         <Route path="/profile"     element={<Profile />} />
         <Route path="/settings"    element={<Settings />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/room"        element={<Room />} />
         <Route path="*"            element={<NotFound />} />
       </Routes>

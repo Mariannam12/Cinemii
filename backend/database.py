@@ -51,6 +51,7 @@ def ensure_user_columns():
         "date_of_birth": "VARCHAR(10)",
         "two_factor_enabled": f"BOOLEAN NOT NULL DEFAULT {false_default}",
         "two_factor_secret": "VARCHAR(64)",
+        "backup_codes": "VARCHAR(2000)",
     }
 
     with engine.begin() as conn:

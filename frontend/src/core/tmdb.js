@@ -22,6 +22,7 @@ export const fetchPopularTV    = ()   => tmdb('/tv/popular');
 export const fetchTopRatedTV   = ()   => tmdb('/tv/top_rated');
 export const fetchByGenre      = (id) => tmdb('/discover/movie', { with_genres: id, sort_by: 'popularity.desc' });
 export const fetchByGenrePaged = (id, page = 1) => tmdb('/discover/movie', { with_genres: id, sort_by: 'popularity.desc', page });
+export const discoverMovies    = (params = {}) => tmdb('/discover/movie', { sort_by: 'popularity.desc', 'vote_count.gte': 200, ...params });
 export const fetchMovie        = (id) => tmdb(`/movie/${id}`, { append_to_response: 'videos,credits,recommendations,similar' });
 export const fetchTV           = (id) => tmdb(`/tv/${id}`,    { append_to_response: 'videos,credits,recommendations' });
 export const fetchTVSeason     = (id, season) => tmdb(`/tv/${id}/season/${season}`);

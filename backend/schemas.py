@@ -78,8 +78,60 @@ class TwoFACodeIn(BaseModel):
     code: str = Field(min_length=6, max_length=10)
 
 
+class TwoFAEnableOut(BaseModel):
+    user: UserOut
+    backup_codes: list[str]
+
+
+class BackupCodesOut(BaseModel):
+    backup_codes: list[str]
+
+
 class DeleteAccountIn(BaseModel):
     password: Optional[str] = Field(default=None, max_length=128)
+
+
+class ForgotPasswordIn(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordIn(BaseModel):
+    token: str
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+# --- Watchlist & reviews ----------------------------------------------------
+
+class WatchlistIn(BaseModel):
+    media_type: str = Field(default="movie", max_length=10)
+    media_id: str = Field(max_length=32)
+    title: Optional[str] = Field(default=None, max_length=300)
+    poster_path: Optional[str] = Field(default=None, max_length=300)
+
+
+class WatchlistOut(WatchlistIn):
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ReviewIn(BaseModel):
+    media_type: str = Field(default="movie", max_length=10)
+    media_id: str = Field(max_length=32)
+    title: Optional[str] = Field(default=None, max_length=300)
+    poster_path: Optional[str] = Field(default=None, max_length=300)
+    rating: float = Field(ge=0, le=5)
+    review: Optional[str] = Field(default=None, max_length=2000)
+
+
+class ReviewOut(ReviewIn):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 # --- Watch progress ---------------------------------------------------------

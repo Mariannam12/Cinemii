@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Edit3, Check, X, Film, Clock, Heart, Trophy, Settings } from 'lucide-react';
+import { LogOut, Edit3, Check, X, Film, Clock, Heart, Trophy, Settings, Bookmark } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../core/backend';
 import { imgUrl } from '../core/tmdb';
@@ -12,6 +12,7 @@ export function Profile() {
   const navigate                           = useNavigate();
   const [favorites,  setFavorites]         = useState([]);
   const [progress,   setProgress]          = useState([]);
+  const [watchlist,  setWatchlist]         = useState([]);
   const [loading,    setLoading]           = useState(true);
 
   // Edit mode
@@ -22,10 +23,11 @@ export function Profile() {
 
   useEffect(() => {
     if (!loggedIn) { navigate('/'); return; }
-    Promise.all([api.listFavorites(), api.listProgress()])
-      .then(([favs, prog]) => {
+    Promise.all([api.listFavorites(), api.listProgress(), api.listWatchlist()])
+      .then(([favs, prog, wl]) => {
         setFavorites(favs || []);
         setProgress((prog || []).filter(p => p.position_seconds > 0));
+        setWatchlist(wl || []);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -185,6 +187,24 @@ export function Profile() {
             </section>
           )
         }
+
+        {/* Watchlist */}
+        {!loading && watchlist.length > 0 && (
+          <section className="mb-14">
+            <h2 className="text-lg font-bold text-white mb-5 flex items-center gap-2">
+              <Bookmark size={18} className="text-accent" /> Watchlist
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {watchlist.map(w => (
+                <MovieCard
+                  key={`${w.media_type}-${w.media_id}`}
+                  movie={{ id: w.media_id, title: w.title, poster_path: w.poster_path, media_type: w.media_type }}
+                  mediaType={w.media_type}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Favorites */}
         {loading

@@ -63,3 +63,15 @@ TMDB_API_KEY = os.environ.get(
     "CINEMII_TMDB_KEY", "47729336f5fe1d690418538825a71879"
 )
 TMDB_BASE = "https://api.themoviedb.org/3"
+
+# --- Frontend / email (password reset) --------------------------------------
+# Where the reset link should point (your deployed frontend).
+FRONTEND_URL = os.environ.get("CINEMII_FRONTEND_URL", "http://localhost:3000")
+
+# SMTP is optional: if unset, reset links are logged to the server console so
+# staging still works (read the link from the Render logs).
+SMTP_HOST = os.environ.get("CINEMII_SMTP_HOST")
+SMTP_PORT = int(os.environ.get("CINEMII_SMTP_PORT", "587"))
+SMTP_USER = os.environ.get("CINEMII_SMTP_USER")
+SMTP_PASS = os.environ.get("CINEMII_SMTP_PASS")
+SMTP_FROM = os.environ.get("CINEMII_SMTP_FROM", "Cinemii <no-reply@cinemii.app>")

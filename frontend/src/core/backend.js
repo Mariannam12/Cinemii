@@ -61,7 +61,21 @@ export const api = {
   twofaSetup:     ()                      => request('POST',  '/api/auth/2fa/setup',        { auth: true }),
   twofaEnable:    (code)                  => request('POST',  '/api/auth/2fa/enable',       { body: { code }, auth: true }),
   twofaDisable:   (code)                  => request('POST',  '/api/auth/2fa/disable',      { body: { code }, auth: true }),
+  twofaBackupCodes:(code)                 => request('POST',  '/api/auth/2fa/backup-codes', { body: { code }, auth: true }),
   deleteAccount:  (password)              => request('DELETE','/api/auth/account',          { body: { password }, auth: true }),
+  forgotPassword: (email)                 => request('POST',  '/api/auth/forgot-password',  { body: { email } }),
+  resetPassword:  (token, new_password)   => request('POST',  '/api/auth/reset-password',   { body: { token, new_password } }),
+
+  // Watchlist
+  listWatchlist:  ()                      => request('GET',   '/api/watchlist',             { auth: true }),
+  addWatchlist:   (data)                  => request('POST',  '/api/watchlist',             { body: data, auth: true }),
+  removeWatchlist:(type, id)              => request('DELETE',`/api/watchlist/${type}/${id}`,{ auth: true }),
+
+  // Reviews / ratings
+  myReviews:      ()                      => request('GET',   '/api/reviews',               { auth: true }),
+  getReview:      (type, id)              => request('GET',   `/api/reviews/${type}/${id}`, { auth: true }),
+  saveReview:     (data)                  => request('POST',  '/api/reviews',               { body: data, auth: true }),
+  deleteReview:   (type, id)              => request('DELETE',`/api/reviews/${type}/${id}`, { auth: true }),
 
   streamInfo:     (type, id)              => request('GET',  `/api/stream/info/${type}/${id}`, { auth: true }),
 
