@@ -105,10 +105,10 @@ export function AuthModal({ onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-overlay"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="glass-dark w-full max-w-md rounded-2xl p-8 shadow-2xl relative">
+      <div className="glass-dark w-full max-w-md rounded-3xl p-8 shadow-2xl relative animate-pop">
         {/* Close */}
         <button
           onClick={onClose}

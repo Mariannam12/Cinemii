@@ -1,4 +1,7 @@
+import { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { useToast, setExternalToast } from './contexts/ToastContext';
+import { RouteProgress } from './components/layout/RouteProgress';
 import { Navbar } from './components/layout/Navbar';
 import { Home } from './pages/Home';
 import { Movie } from './pages/Movie';
@@ -25,8 +28,13 @@ function NotFound() {
 }
 
 export default function App() {
+  const { toast } = useToast();
+  // Let non-component code (api client, etc.) raise toasts.
+  useEffect(() => { setExternalToast(toast); }, [toast]);
+
   return (
     <>
+      <RouteProgress />
       <Navbar />
       <Routes>
         <Route path="/"            element={<Home />} />

@@ -54,7 +54,8 @@ class ProfileUpdateIn(BaseModel):
     username: Optional[str] = Field(default=None, min_length=3, max_length=40)
     bio: Optional[str] = Field(default=None, max_length=300)
     date_of_birth: Optional[str] = Field(default=None, max_length=10)
-    picture: Optional[str] = Field(default=None, max_length=512)
+    # Either an https URL or an uploaded-avatar data URI (~up to ~2 MB).
+    picture: Optional[str] = Field(default=None, max_length=2_500_000)
 
 
 class EmailChangeIn(BaseModel):

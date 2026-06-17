@@ -67,3 +67,11 @@ def ensure_user_columns():
             )
         except Exception:
             pass  # index may already exist under a different name
+
+        # Widen picture VARCHAR(512) -> TEXT so it can hold uploaded avatars.
+        # SQLite ignores declared length, so this only matters on Postgres.
+        if is_pg:
+            try:
+                conn.execute(text("ALTER TABLE users ALTER COLUMN picture TYPE TEXT"))
+            except Exception:
+                pass

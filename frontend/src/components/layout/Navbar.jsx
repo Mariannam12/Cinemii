@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Play, Bell, User, LogOut, Menu, X, Tv, Star, Users, MessageCircle, Search, Settings, Sparkles } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -8,6 +8,7 @@ import { SearchOverlay } from '../search/SearchOverlay';
 import { NotificationPanel } from './NotificationPanel';
 import { CommunityChat } from '../chat/CommunityChat';
 import { MoodRecommender } from '../ai/MoodRecommender';
+import { buildNotifications, countUnread } from '../../core/notifications';
 
 const NAV = [
   { label: 'Home',      path: '/' },
@@ -26,6 +27,7 @@ export function Navbar() {
   const [showChat,   setShowChat]     = useState(false);
   const [showMood,   setShowMood]     = useState(false);
   const [showSearch, setShowSearch]   = useState(false); // mobile overlay
+  const [unread,     setUnread]       = useState(0);
   const [menuOpen,   setMenuOpen]     = useState(false);
   const [scrolled,   setScrolled]     = useState(false);
 
@@ -36,6 +38,12 @@ export function Navbar() {
   }, []);
 
   useEffect(() => { setMenuOpen(false); }, [location.pathname]);
+
+  // Real unread count for the bell dot.
+  const refreshUnread = useCallback(() => {
+    buildNotifications().then(list => setUnread(countUnread(list))).catch(() => {});
+  }, []);
+  useEffect(() => { refreshUnread(); }, [refreshUnread, loggedIn]);
 
   const isActive = (path) => path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
 
@@ -123,9 +131,9 @@ export function Navbar() {
                 aria-label="Notifications"
               >
                 <Bell size={17} />
-                <span className="absolute top-1.5 right-2 w-1.5 h-1.5 bg-accent rounded-full ring-2 ring-bg" />
+                {unread > 0 && <span className="absolute top-1.5 right-2 w-1.5 h-1.5 bg-accent rounded-full ring-2 ring-bg" />}
               </button>
-              {showNotifs && <NotificationPanel onClose={() => setShowNotifs(false)} />}
+              {showNotifs && <NotificationPanel onClose={() => setShowNotifs(false)} onRead={refreshUnread} />}
             </div>
 
             {/* Profile / Auth */}

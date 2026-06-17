@@ -26,6 +26,7 @@ export const discoverMovies    = (params = {}) => tmdb('/discover/movie', { sort
 export const fetchMovie        = (id) => tmdb(`/movie/${id}`, { append_to_response: 'videos,credits,recommendations,similar' });
 export const fetchTV           = (id) => tmdb(`/tv/${id}`,    { append_to_response: 'videos,credits,recommendations' });
 export const fetchTVSeason     = (id, season) => tmdb(`/tv/${id}/season/${season}`);
+export const fetchVideos       = (type, id) => tmdb(`/${type === 'tv' ? 'tv' : 'movie'}/${id}/videos`);
 export const fetchPerson       = (id) => tmdb(`/person/${id}`, { append_to_response: 'movie_credits,tv_credits,images' });
 export const fetchRecsForMovie = (id) => tmdb(`/movie/${id}/recommendations`);
 export const searchMulti       = (q)  => tmdb('/search/multi', { query: q });

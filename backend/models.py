@@ -10,6 +10,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
@@ -32,7 +33,8 @@ class User(Base):
     # Nullable: OAuth (Google) users never set a local password.
     hashed_password = Column(String(255), nullable=True)
     provider = Column(String(40), nullable=False, default="Email")
-    picture = Column(String(512), nullable=True)
+    # Text (not VARCHAR) so it can hold an uploaded avatar as a data URI.
+    picture = Column(Text, nullable=True)
     bio = Column(String(300), nullable=True)
     date_of_birth = Column(String(10), nullable=True)  # ISO 'YYYY-MM-DD'
     # TOTP two-factor (Google Authenticator compatible).

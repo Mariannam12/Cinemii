@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Play, Heart, Clapperboard, Star, Clock, Calendar, Tag, User, Bookmark, BookmarkCheck } from 'lucide-react';
 import { fetchMovie, fetchTV, imgUrl, backdropUrl } from '../core/tmdb';
 import { useFavorites } from '../contexts/FavoritesContext';
+import { useToast } from '../contexts/ToastContext';
 import { api, isLoggedIn } from '../core/backend';
 import { MovieSection } from '../components/home/MovieSection';
 import { CinemaPlayer } from '../components/player/CinemaPlayer';
@@ -26,6 +27,7 @@ export function Movie() {
   const isTV      = loc.pathname.startsWith('/tv/');
   const mediaType = isTV ? 'tv' : 'movie';
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { success, error: toastError } = useToast();
 
   const [movie,    setMovie]    = useState(null);
   const [loading,  setLoading]  = useState(true);
@@ -52,10 +54,10 @@ export function Movie() {
   const toggleWatchlist = async () => {
     if (!isLoggedIn()) return;
     try {
-      if (inWatchlist) await api.removeWatchlist(mediaType, id);
-      else await api.addWatchlist({ media_type: mediaType, media_id: String(id), title: movie.title || movie.name, poster_path: movie.poster_path });
+      if (inWatchlist) { await api.removeWatchlist(mediaType, id); success('Removed from your watchlist'); }
+      else { await api.addWatchlist({ media_type: mediaType, media_id: String(id), title: movie.title || movie.name, poster_path: movie.poster_path }); success('Added to your watchlist'); }
       setInWL(v => !v);
-    } catch { /* ignore */ }
+    } catch { toastError('Could not update watchlist.'); }
   };
 
   if (loading) return <DetailSkeleton />;

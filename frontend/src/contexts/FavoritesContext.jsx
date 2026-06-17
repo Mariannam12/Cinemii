@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { api, isLoggedIn } from '../core/backend';
+import { useToast } from './ToastContext';
 
 const FavoritesContext = createContext(null);
 
@@ -8,6 +9,7 @@ const key = (type, id) => `${type}:${id}`;
 export function FavoritesProvider({ children }) {
   const [favSet, setFavSet] = useState(() => new Set());
   const [loaded, setLoaded] = useState(false);
+  const { success, error, info } = useToast();
 
   // Load the user's favorites once on mount / login
   const reload = useCallback(() => {
@@ -35,7 +37,7 @@ export function FavoritesProvider({ children }) {
   );
 
   const toggleFavorite = useCallback(async (movie, type) => {
-    if (!isLoggedIn()) return false;
+    if (!isLoggedIn()) { info('Sign in to save favorites.'); return false; }
     const k = key(type, String(movie.id));
     const currentlyFav = favSet.has(k);
 
@@ -47,16 +49,19 @@ export function FavoritesProvider({ children }) {
       return next;
     });
 
+    const label = movie.title || movie.name || 'Title';
     try {
       if (currentlyFav) {
         await api.removeFavorite(type, movie.id);
+        info(`Removed "${label}" from favorites`);
       } else {
         await api.addFavorite({
           media_type: type,
           media_id: String(movie.id),
-          title: movie.title || movie.name || '',
+          title: label,
           poster_path: movie.poster_path,
         });
+        success(`Added "${label}" to favorites`);
       }
       return !currentlyFav;
     } catch {
@@ -67,9 +72,10 @@ export function FavoritesProvider({ children }) {
         else next.delete(k);
         return next;
       });
+      error('Could not update favorites. Try again.');
       return currentlyFav;
     }
-  }, [favSet]);
+  }, [favSet, success, error, info]);
 
   return (
     <FavoritesContext.Provider value={{ isFavorite, toggleFavorite, reload, loaded }}>
