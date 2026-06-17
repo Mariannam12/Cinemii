@@ -10,7 +10,6 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
-    Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
@@ -33,15 +32,12 @@ class User(Base):
     # Nullable: OAuth (Google) users never set a local password.
     hashed_password = Column(String(255), nullable=True)
     provider = Column(String(40), nullable=False, default="Email")
-    # Text (not VARCHAR) so it can hold an uploaded avatar as a data URI.
-    picture = Column(Text, nullable=True)
+    picture = Column(String(512), nullable=True)
     bio = Column(String(300), nullable=True)
     date_of_birth = Column(String(10), nullable=True)  # ISO 'YYYY-MM-DD'
     # TOTP two-factor (Google Authenticator compatible).
     two_factor_enabled = Column(Boolean, nullable=False, default=False)
     two_factor_secret = Column(String(64), nullable=True)
-    # JSON array of bcrypt-hashed one-time recovery codes.
-    backup_codes = Column(String(2000), nullable=True)
     created_at = Column(DateTime, default=_utcnow)
 
     progress = relationship(
@@ -90,36 +86,44 @@ class Favorite(Base):
     created_at = Column(DateTime, default=_utcnow)
 
     user = relationship("User", back_populates="favorites")
-
-
-class WatchlistItem(Base):
-    __tablename__ = "watchlist"
+class FriendRequest(Base):
+    __tablename__ = "friend_requests"
     __table_args__ = (
-        UniqueConstraint("user_id", "media_type", "media_id", name="uq_watchlist"),
+        UniqueConstraint("from_user_id", "to_user_id", name="uq_friend_request"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    from_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    to_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    status = Column(String(20), nullable=False, default="pending")
+    created_at = Column(DateTime, default=_utcnow)
+
+    from_user = relationship("User", foreign_keys=[from_user_id])
+    to_user = relationship("User", foreign_keys=[to_user_id])
+
+
+class Friendship(Base):
+    __tablename__ = "friendships"
+    __table_args__ = (
+        UniqueConstraint("user_id", "friend_id", name="uq_friendship"),
     )
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    media_type = Column(String(10), nullable=False, default="movie")
-    media_id = Column(String(32), nullable=False)
-    title = Column(String(300), nullable=True)
-    poster_path = Column(String(300), nullable=True)
+    friend_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     created_at = Column(DateTime, default=_utcnow)
 
+    user = relationship("User", foreign_keys=[user_id])
+    friend = relationship("User", foreign_keys=[friend_id])
 
-class Review(Base):
-    __tablename__ = "reviews"
-    __table_args__ = (
-        UniqueConstraint("user_id", "media_type", "media_id", name="uq_review"),
-    )
+class Message(Base):
+    __tablename__ = "messages"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    media_type = Column(String(10), nullable=False, default="movie")
-    media_id = Column(String(32), nullable=False)
-    title = Column(String(300), nullable=True)
-    poster_path = Column(String(300), nullable=True)
-    rating = Column(Float, nullable=False, default=0.0)   # 0.5–5 stars
-    review = Column(String(2000), nullable=True)
+    from_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    to_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    text = Column(String(1000), nullable=False)
     created_at = Column(DateTime, default=_utcnow)
-    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+    from_user = relationship("User", foreign_keys=[from_user_id])
+    to_user = relationship("User", foreign_keys=[to_user_id])

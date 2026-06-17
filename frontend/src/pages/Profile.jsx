@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Edit3, Check, X, Film, Clock, Heart, Trophy, Settings, Bookmark } from 'lucide-react';
+import { LogOut, Edit3, Check, X, Film, Clock, Heart, Trophy, Settings, Users, Search, UserPlus, MessageCircle, UserCheck, UserX, Wifi } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../core/backend';
 import { imgUrl } from '../core/tmdb';
@@ -12,7 +12,6 @@ export function Profile() {
   const navigate                           = useNavigate();
   const [favorites,  setFavorites]         = useState([]);
   const [progress,   setProgress]          = useState([]);
-  const [watchlist,  setWatchlist]         = useState([]);
   const [loading,    setLoading]           = useState(true);
 
   // Edit mode
@@ -20,18 +19,35 @@ export function Profile() {
   const [editName,   setEditName]          = useState('');
   const [saving,     setSaving]            = useState(false);
   const [saveMsg,    setSaveMsg]           = useState(null);
+  const [friends,    setFriends]           = useState([]);
+  const [searchQuery, setSearchQuery]      = useState('');
+  const [searchResults, setSearchResults]  = useState([]);
+  const [searching, setSearching]          = useState(false);
+  const [hasSearched, setHasSearched]      = useState(false);
+  const [searchError, setSearchError]      = useState('');
+  const [friendRequests, setFriendRequests] = useState([]);
 
   useEffect(() => {
-    if (!loggedIn) { navigate('/'); return; }
-    Promise.all([api.listFavorites(), api.listProgress(), api.listWatchlist()])
-      .then(([favs, prog, wl]) => {
-        setFavorites(favs || []);
-        setProgress((prog || []).filter(p => p.position_seconds > 0));
-        setWatchlist(wl || []);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [loggedIn, navigate]);
+  if (!loggedIn) {
+    navigate('/');
+    return;
+  }
+
+  Promise.all([
+    api.listFavorites(),
+    api.listProgress(),
+    api.listFriends(),
+    api.listFriendRequests(),
+  ])
+    .then(([favs, prog, friendsList, requests]) => {
+      setFavorites(favs || []);
+      setProgress((prog || []).filter(p => p.position_seconds > 0));
+      setFriends(friendsList || []);
+      setFriendRequests(requests || []);
+    })
+    .catch(console.error)
+    .finally(() => setLoading(false));
+}, [loggedIn, navigate]);
 
   const startEdit = () => { setEditName(user?.name || ''); setEditing(true); setSaveMsg(null); };
   const cancelEdit = () => setEditing(false);
@@ -54,6 +70,7 @@ export function Profile() {
     }
   };
 
+
   const hoursWatched = Math.round(progress.reduce((a, p) => a + (p.position_seconds || 0), 0) / 3600);
   const completed    = progress.filter(p => p.duration_seconds && p.position_seconds >= p.duration_seconds * 0.9).length;
   const avatar       = user?.picture;
@@ -65,6 +82,96 @@ export function Profile() {
     { label: 'In Progress',   value: progress.length,  icon: Film  },
     { label: 'Completed',     value: completed,         icon: Trophy },
   ];
+
+  const searchUsers = async () => {
+  const q = searchQuery.trim();
+
+  if (!q) {
+    setSearchResults([]);
+    setHasSearched(false);
+    return;
+  }
+
+  setSearching(true);
+  setHasSearched(true);
+  setSearchError('');
+
+  try {
+    const users = await api.searchUsers(q);
+    setSearchResults(users || []);
+  } catch (err) {
+    setSearchResults([]);
+    setSearchError(err.message || 'Search failed');
+  } finally {
+    setSearching(false);
+  }
+};
+
+const addFriend = async (userId) => {
+  try {
+    await api.sendFriendRequest(userId);
+    alert('Friend request sent');
+  } catch (err) {
+    alert(err.message);
+  }
+};
+
+{searchQuery.trim() && searchResults.length === 0 && (
+  <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center">
+    <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-3">
+      <Search size={20} className="text-muted" />
+    </div>
+    <p className="text-white font-bold">No users found</p>
+    <p className="text-muted text-sm mt-1">
+      Try searching by name, username, or email.
+    </p>
+  </div>
+)}
+
+{searching && (
+  <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-center">
+    <p className="text-white font-bold">Searching...</p>
+    <p className="text-muted text-sm mt-1">Looking through Cinemii users</p>
+  </div>
+)}
+
+{searchError && (
+  <div className="mt-5 rounded-2xl border border-red-500/20 bg-red-500/10 p-5 text-center">
+    <p className="text-red-300 font-bold">{searchError}</p>
+  </div>
+)}
+
+{hasSearched && !searching && !searchError && searchResults.length === 0 && (
+  <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-center">
+    <p className="text-white font-bold">No users found</p>
+    <p className="text-muted text-sm mt-1">
+      Try name, username, or email.
+    </p>
+  </div>
+)}
+
+const acceptRequest = async (id) => {
+  try {
+    await api.acceptFriendRequest(id);
+    const [friendsList, requests] = await Promise.all([
+      api.listFriends(),
+      api.listFriendRequests(),
+    ]);
+    setFriends(friendsList || []);
+    setFriendRequests(requests || []);
+  } catch (err) {
+    alert(err.message);
+  }
+};
+
+const rejectRequest = async (id) => {
+  try {
+    await api.rejectFriendRequest(id);
+    setFriendRequests(prev => prev.filter(req => req.id !== id));
+  } catch (err) {
+    alert(err.message);
+  }
+};
 
   return (
     <div className="min-h-screen bg-bg pt-24 pb-20">
@@ -144,13 +251,13 @@ export function Profile() {
         </div>
 
         {/* Continue Watching */}
-        {loading
-          ? <SectionSkeleton />
-          : progress.length > 0 && (
-            <section className="mb-14">
-              <h2 className="text-lg font-bold text-white mb-5 flex items-center gap-2">
-                <Clock size={18} className="text-accent" /> Continue Watching
-              </h2>
+ {loading
+  ? <SectionSkeleton />
+  : progress.length > 0 && (
+    <section className="mb-14">
+      <h2 className="text-lg font-bold text-white mb-5 flex items-center gap-2">
+        <Clock size={18} className="text-accent" /> Continue Watching
+      </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {progress.slice(0, 6).map(item => {
                   const pct = item.duration_seconds
@@ -186,25 +293,188 @@ export function Profile() {
               </div>
             </section>
           )
-        }
+}
+        
+<section className="mb-14">
+  <div className="flex items-center justify-between mb-6">
+    <div>
+      <p className="text-accent text-xs font-bold uppercase tracking-[0.25em] mb-2">
+        Social Hub
+      </p>
+      <h2 className="text-3xl font-black text-white flex items-center gap-3">
+        <span className="w-11 h-11 rounded-2xl gradient-accent flex items-center justify-center shadow-lg shadow-accent/20">
+          <Users size={22} className="text-white" />
+        </span>
+        Friends
+      </h2>
+      <p className="text-muted text-sm mt-3">
+        Find friends, connect, and watch together.
+      </p>
+    </div>
+  </div>
 
-        {/* Watchlist */}
-        {!loading && watchlist.length > 0 && (
-          <section className="mb-14">
-            <h2 className="text-lg font-bold text-white mb-5 flex items-center gap-2">
-              <Bookmark size={18} className="text-accent" /> Watchlist
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {watchlist.map(w => (
-                <MovieCard
-                  key={`${w.media_type}-${w.media_id}`}
-                  movie={{ id: w.media_id, title: w.title, poster_path: w.poster_path, media_type: w.media_type }}
-                  mediaType={w.media_type}
-                />
-              ))}
+  <div className="glass rounded-3xl p-5 mb-5 border border-white/10">
+    <div className="flex flex-col sm:flex-row gap-3">
+      <div className="relative flex-1">
+        <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-muted" />
+        <input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') searchUsers(); }}
+          placeholder="Search users by name, username, or email..."
+          className="w-full bg-white/5 border border-white/10 text-white placeholder:text-muted rounded-2xl pl-12 pr-5 py-4 focus:outline-none focus:border-accent/50 transition"
+        />
+      </div>
+
+      <button
+        onClick={searchUsers}
+        className="gradient-accent px-7 py-4 rounded-2xl text-white font-bold hover:opacity-90 transition active:scale-95"
+      >
+        Search
+      </button>
+    </div>
+
+    {searchResults.length > 0 && (
+      <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-3">
+        {searchResults.map(result => (
+          <div
+            key={result.id}
+            className="flex items-center justify-between bg-white/[0.04] border border-white/10 rounded-2xl p-4 hover:bg-white/[0.08] transition"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-12 h-12 rounded-2xl overflow-hidden bg-surface flex items-center justify-center text-white font-black">
+                {result.picture ? (
+                  <img src={result.picture} alt={result.name} className="w-full h-full object-cover" />
+                ) : (
+                  result.name?.[0]?.toUpperCase() || '?'
+                )}
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-white font-bold truncate">{result.name}</p>
+                <p className="text-xs text-muted truncate">@{result.username || 'cinemii-user'}</p>
+              </div>
             </div>
-          </section>
-        )}
+
+            <button
+              onClick={() => addFriend(result.id)}
+              className="flex items-center gap-2 bg-white/10 hover:bg-accent text-white border border-white/10 px-4 py-2 rounded-xl text-sm font-bold transition active:scale-95"
+            >
+              <UserPlus size={15} />
+              Add
+            </button>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+
+ {friendRequests.length > 0 && (
+  <div className="glass rounded-3xl p-5 mb-5 border border-white/10">
+    <h3 className="text-white text-xl font-black mb-4">
+      Friend Requests
+    </h3>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {friendRequests.map(req => (
+        <div
+          key={req.id}
+          className="flex items-center justify-between bg-white/[0.04] border border-white/10 rounded-2xl p-4"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-12 h-12 rounded-2xl overflow-hidden bg-surface flex items-center justify-center text-white font-black">
+              {req.from_user?.picture ? (
+                <img src={req.from_user.picture} alt={req.from_user.name} className="w-full h-full object-cover" />
+              ) : (
+                req.from_user?.name?.[0]?.toUpperCase() || '?'
+              )}
+            </div>
+
+            <div className="min-w-0">
+              <p className="text-white font-bold truncate">
+                {req.from_user?.name}
+              </p>
+              <p className="text-xs text-muted truncate">
+                wants to connect
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-2 ml-3">
+            <button
+              onClick={() => acceptRequest(req.id)}
+              className="w-10 h-10 rounded-xl gradient-accent flex items-center justify-center text-white hover:opacity-90 transition"
+            >
+              <UserCheck size={17} />
+            </button>
+
+            <button
+              onClick={() => rejectRequest(req.id)}
+              className="w-10 h-10 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center text-white hover:bg-white/15 transition"
+            >
+              <UserX size={17} />
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
+  <div className="glass rounded-3xl p-5 border border-white/10">
+    <div className="flex items-center justify-between mb-5">
+      <div>
+        <h3 className="text-white text-xl font-black">
+          Friends Network
+        </h3>
+        <p className="text-muted text-sm mt-1">
+          {friends.length} connected {friends.length === 1 ? 'friend' : 'friends'}
+        </p>
+      </div>
+    </div>
+
+    {friends.length === 0 ? (
+      <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center">
+        <p className="text-white font-bold">No friends yet</p>
+        <p className="text-muted text-sm mt-2">
+          Search for users above and send your first request.
+        </p>
+      </div>
+    ) : (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {friends.map(friend => (
+          <div
+            key={friend.id}
+            className="flex items-center gap-3 bg-white/[0.04] border border-white/10 rounded-2xl p-4 hover:bg-white/[0.08] transition"
+          >
+            <div className="relative">
+              <div className="w-12 h-12 rounded-2xl overflow-hidden bg-surface flex items-center justify-center text-white font-black">
+                {friend.picture ? (
+                  <img src={friend.picture} alt={friend.name} className="w-full h-full object-cover" />
+                ) : (
+                  friend.name?.[0]?.toUpperCase() || '?'
+                )}
+              </div>
+              <span className="absolute -right-1 -bottom-1 w-5 h-5 rounded-xl bg-green-500 ring-2 ring-bg flex items-center justify-center">
+  <Wifi size={10} className="text-white" />
+</span>
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-bold truncate">{friend.name}</p>
+              <p className="text-xs text-muted truncate">@{friend.username || 'cinemii-user'}</p>
+            </div>
+
+            <button className="flex items-center gap-2 bg-white/10 hover:bg-white/15 text-white px-3 py-2 rounded-xl text-xs font-bold transition">
+              <MessageCircle size={14} />
+              Chat
+            </button>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+</section>
 
         {/* Favorites */}
         {loading

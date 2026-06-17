@@ -5,11 +5,10 @@ Run (from the backend/ directory):
 """
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 from config import ALLOWED_ORIGINS, ALLOWED_ORIGIN_REGEX
 from database import Base, engine, ensure_user_columns
-from routers import account, auth, content, library, stream, realtime, tmdb_proxy
+from routers import account, auth, library, stream, realtime, tmdb_proxy, friends, messages
 
 # Create tables on startup (fine for SQLite/staging; use Alembic for prod).
 Base.metadata.create_all(bind=engine)
@@ -18,22 +17,33 @@ ensure_user_columns()
 
 app = FastAPI(title="CINEMII API", version="1.0.0")
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in ALLOWED_ORIGINS if o.strip()],
-    allow_origin_regex=ALLOWED_ORIGIN_REGEX or None,
+    allow_origins=[
+        "http://127.0.0.1:3000",
+        "http://localhost:3000",
+        "http://127.0.0.1:3001",
+         "http://localhost:3001",
+        "http://127.0.0.1:3001",
+        "http://localhost:3001",
+        "http://127.0.0.1:5173",
+        "http://localhost:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+
 app.include_router(auth.router)
 app.include_router(account.router)
 app.include_router(library.router)
-app.include_router(content.router)
 app.include_router(stream.router)
 app.include_router(realtime.router)
 app.include_router(tmdb_proxy.router)
+app.include_router(friends.router)
 
 
 @app.get("/api/health", tags=["meta"])
