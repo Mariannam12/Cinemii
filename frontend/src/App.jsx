@@ -1,18 +1,23 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useToast, setExternalToast } from './contexts/ToastContext';
 import { RouteProgress } from './components/layout/RouteProgress';
 import { Navbar } from './components/layout/Navbar';
-import { Home } from './pages/Home';
-import { Movie } from './pages/Movie';
-import { Profile } from './pages/Profile';
-import { Person } from './pages/Person';
-import { Room } from './pages/Room';
-import { Search } from './pages/Search';
-import { Genre } from './pages/Genre';
-import { Settings } from './pages/Settings';
-import { ResetPassword } from './pages/ResetPassword';
-import { Movies, TVShows, TopRated } from './pages/Browse';
+import { Home } from './pages/Home'; // eager — above the fold
+
+// Lazy-load the rest so the initial bundle stays small.
+const named = (p, key) => lazy(() => p().then(m => ({ default: m[key] })));
+const Movie         = named(() => import('./pages/Movie'), 'Movie');
+const Person        = named(() => import('./pages/Person'), 'Person');
+const Search        = named(() => import('./pages/Search'), 'Search');
+const Genre         = named(() => import('./pages/Genre'), 'Genre');
+const Profile       = named(() => import('./pages/Profile'), 'Profile');
+const Settings      = named(() => import('./pages/Settings'), 'Settings');
+const ResetPassword = named(() => import('./pages/ResetPassword'), 'ResetPassword');
+const Room          = named(() => import('./pages/Room'), 'Room');
+const Movies        = named(() => import('./pages/Browse'), 'Movies');
+const TVShows       = named(() => import('./pages/Browse'), 'TVShows');
+const TopRated      = named(() => import('./pages/Browse'), 'TopRated');
 
 function NotFound() {
   return (
@@ -27,6 +32,14 @@ function NotFound() {
   );
 }
 
+function PageLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
+
 export default function App() {
   const { toast } = useToast();
   // Let non-component code (api client, etc.) raise toasts.
@@ -36,22 +49,24 @@ export default function App() {
     <>
       <RouteProgress />
       <Navbar />
-      <Routes>
-        <Route path="/"            element={<Home />} />
-        <Route path="/movie/:id"   element={<Movie />} />
-        <Route path="/tv/:id"      element={<Movie />} />
-        <Route path="/person/:id"  element={<Person />} />
-        <Route path="/search"      element={<Search />} />
-        <Route path="/genre/:id"   element={<Genre />} />
-        <Route path="/movies"      element={<Movies />} />
-        <Route path="/tv-shows"    element={<TVShows />} />
-        <Route path="/top-rated"   element={<TopRated />} />
-        <Route path="/profile"     element={<Profile />} />
-        <Route path="/settings"    element={<Settings />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/room"        element={<Room />} />
-        <Route path="*"            element={<NotFound />} />
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/"            element={<Home />} />
+          <Route path="/movie/:id"   element={<Movie />} />
+          <Route path="/tv/:id"      element={<Movie />} />
+          <Route path="/person/:id"  element={<Person />} />
+          <Route path="/search"      element={<Search />} />
+          <Route path="/genre/:id"   element={<Genre />} />
+          <Route path="/movies"      element={<Movies />} />
+          <Route path="/tv-shows"    element={<TVShows />} />
+          <Route path="/top-rated"   element={<TopRated />} />
+          <Route path="/profile"     element={<Profile />} />
+          <Route path="/settings"    element={<Settings />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/room"        element={<Room />} />
+          <Route path="*"            element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </>
   );
 }

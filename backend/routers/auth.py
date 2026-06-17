@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from deps import get_current_user
 from models import User
+from ratelimit import rate_limiter
 from schemas import GoogleIn, LoginIn, SignupIn, TokenOut, UserOut
 from security import (
     create_access_token,
@@ -28,7 +29,12 @@ def _issue(user: User) -> TokenOut:
     return TokenOut(access_token=token, user=UserOut.model_validate(user))
 
 
-@router.post("/signup", response_model=TokenOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/signup",
+    response_model=TokenOut,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(rate_limiter(5, 60))],
+)
 def signup(body: SignupIn, db: Session = Depends(get_db)):
     email = body.email.lower().strip()
 
@@ -50,7 +56,7 @@ def signup(body: SignupIn, db: Session = Depends(get_db)):
     return _issue(user)
 
 
-@router.post("/login")
+@router.post("/login", dependencies=[Depends(rate_limiter(10, 60))])
 def login(body: LoginIn, db: Session = Depends(get_db)):
     email = body.email.lower().strip()
     user = db.query(User).filter(User.email == email).first()

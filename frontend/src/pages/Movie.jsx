@@ -4,6 +4,7 @@ import { ArrowLeft, Play, Heart, Clapperboard, Star, Clock, Calendar, Tag, User,
 import { fetchMovie, fetchTV, imgUrl, backdropUrl } from '../core/tmdb';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { useToast } from '../contexts/ToastContext';
+import { useSeo } from '../core/seo';
 import { api, isLoggedIn } from '../core/backend';
 import { MovieSection } from '../components/home/MovieSection';
 import { CinemaPlayer } from '../components/player/CinemaPlayer';
@@ -59,6 +60,13 @@ export function Movie() {
       setInWL(v => !v);
     } catch { toastError('Could not update watchlist.'); }
   };
+
+  // Per-page SEO for shareable links.
+  useSeo(movie ? {
+    title: movie.title || movie.name,
+    description: movie.overview,
+    image: movie.backdrop_path ? backdropUrl(movie.backdrop_path) : undefined,
+  } : {});
 
   if (loading) return <DetailSkeleton />;
   if (!movie)  return <div className="min-h-screen flex items-center justify-center text-muted">Not found.</div>;

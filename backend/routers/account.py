@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from config import FRONTEND_URL
 from database import get_db
+from ratelimit import rate_limiter
 from deps import get_current_user
 from mailer import send_email
 from models import User
@@ -214,7 +215,7 @@ def delete_account(
 
 # --- Password reset (no auth) -----------------------------------------------
 
-@router.post("/forgot-password")
+@router.post("/forgot-password", dependencies=[Depends(rate_limiter(4, 300))])
 def forgot_password(body: ForgotPasswordIn, db: Session = Depends(get_db)):
     """Email a reset link. Always returns 200 so we don't leak which emails exist."""
     email = body.email.lower().strip()
@@ -234,7 +235,7 @@ def forgot_password(body: ForgotPasswordIn, db: Session = Depends(get_db)):
     return {"ok": True, "message": "If that email exists, a reset link has been sent."}
 
 
-@router.post("/reset-password", response_model=UserOut)
+@router.post("/reset-password", response_model=UserOut, dependencies=[Depends(rate_limiter(8, 300))])
 def reset_password(body: ResetPasswordIn, db: Session = Depends(get_db)):
     user_id = decode_reset_token(body.token)
     if not user_id:
