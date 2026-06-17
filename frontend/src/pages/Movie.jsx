@@ -84,7 +84,8 @@ export function Movie() {
   const writer      = crew.find(c => c.job === 'Writer' || c.job === 'Screenplay')?.name;
   const recs        = (movie.recommendations?.results || []).filter(r => r.poster_path).slice(0, 20);
   const similar     = (movie.similar?.results || []).filter(r => r.poster_path).slice(0, 20);
-  const trailerKey  = movie.videos?.results?.find(v => v.type === 'Trailer' && v.site === 'YouTube')?.key;
+  const videos      = (movie.videos?.results || []).filter(v => v.site === 'YouTube' && v.key);
+  const trailerKey  = (videos.find(v => v.type === 'Trailer') || videos[0])?.key;
   const seasons     = (movie.seasons || []).filter(s => s.season_number > 0);
 
   return (
@@ -207,6 +208,33 @@ export function Movie() {
                   </div>
                   <p className="text-white text-xs font-semibold leading-tight line-clamp-2 group-hover:text-accent transition">{person.name}</p>
                   <p className="text-muted text-xs mt-0.5 line-clamp-1">{person.character}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Trailers & media */}
+        {videos.length > 0 && (
+          <div className="mt-14">
+            <h2 className="text-lg font-bold text-white mb-5 flex items-center gap-2">
+              <Clapperboard size={18} className="text-accent" /> Trailers &amp; More
+            </h2>
+            <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2">
+              {videos.slice(0, 12).map(v => (
+                <button
+                  key={v.id || v.key}
+                  onClick={() => setTrailer(v.key)}
+                  className="flex-shrink-0 w-64 text-left group"
+                >
+                  <div className="relative rounded-xl overflow-hidden aspect-video bg-surface ring-1 ring-white/5 group-hover:ring-accent/40 transition">
+                    <img src={`https://img.youtube.com/vi/${v.key}/mqdefault.jpg`} alt={v.name} loading="lazy" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition flex items-center justify-center">
+                      <span className="w-12 h-12 rounded-full bg-accent/90 flex items-center justify-center"><Play size={20} className="text-white ml-0.5" fill="white" /></span>
+                    </div>
+                  </div>
+                  <p className="text-white text-sm font-semibold line-clamp-1 mt-2">{v.name}</p>
+                  <p className="text-muted text-xs mt-0.5">{v.type}</p>
                 </button>
               ))}
             </div>

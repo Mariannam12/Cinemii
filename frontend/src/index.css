@@ -121,6 +121,11 @@ button:active { transform: scale(0.97); }
 
 .hero-zoom { transform: scale(1.04); }
 
+/* Touch devices have no hover — keep card actions reachable. */
+@media (hover: none) {
+  .card-actions { opacity: 1 !important; transform: none !important; }
+}
+
 @keyframes pulseGlow {
   0%, 100% { box-shadow: 0 0 20px rgba(255, 48, 64, 0.3); }
   50%       { box-shadow: 0 0 40px rgba(255, 48, 64, 0.6); }

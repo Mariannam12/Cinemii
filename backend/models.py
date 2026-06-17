@@ -107,6 +107,32 @@ class WatchlistItem(Base):
     created_at = Column(DateTime, default=_utcnow)
 
 
+class Follow(Base):
+    __tablename__ = "follows"
+    __table_args__ = (
+        UniqueConstraint("follower_id", "following_id", name="uq_follow"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    follower_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    following_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=_utcnow)
+
+
+class EpisodeWatch(Base):
+    __tablename__ = "episode_watch"
+    __table_args__ = (
+        UniqueConstraint("user_id", "tv_id", "season", "episode", name="uq_episode"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    tv_id = Column(String(32), nullable=False, index=True)
+    season = Column(Integer, nullable=False)
+    episode = Column(Integer, nullable=False)
+    watched_at = Column(DateTime, default=_utcnow)
+
+
 class Review(Base):
     __tablename__ = "reviews"
     __table_args__ = (

@@ -18,6 +18,8 @@ const Room          = named(() => import('./pages/Room'), 'Room');
 const Movies        = named(() => import('./pages/Browse'), 'Movies');
 const TVShows       = named(() => import('./pages/Browse'), 'TVShows');
 const TopRated      = named(() => import('./pages/Browse'), 'TopRated');
+const PublicProfile = named(() => import('./pages/PublicProfile'), 'PublicProfile');
+const Feed          = named(() => import('./pages/Feed'), 'Feed');
 
 function NotFound() {
   return (
@@ -61,6 +63,8 @@ export default function App() {
           <Route path="/tv-shows"    element={<TVShows />} />
           <Route path="/top-rated"   element={<TopRated />} />
           <Route path="/profile"     element={<Profile />} />
+          <Route path="/u/:username" element={<PublicProfile />} />
+          <Route path="/feed"        element={<Feed />} />
           <Route path="/settings"    element={<Settings />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/room"        element={<Room />} />

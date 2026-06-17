@@ -8,6 +8,7 @@ import { SearchOverlay } from '../search/SearchOverlay';
 import { NotificationPanel } from './NotificationPanel';
 import { CommunityChat } from '../chat/CommunityChat';
 import { MoodRecommender } from '../ai/MoodRecommender';
+import { BottomNav } from './BottomNav';
 import { buildNotifications, countUnread } from '../../core/notifications';
 
 const NAV = [
@@ -44,6 +45,24 @@ export function Navbar() {
     buildNotifications().then(list => setUnread(countUnread(list))).catch(() => {});
   }, []);
   useEffect(() => { refreshUnread(); }, [refreshUnread, loggedIn]);
+
+  // Global keyboard shortcuts: "/" search, "g h/m/t/r/p" navigate.
+  useEffect(() => {
+    let gPending = false, gTimer = null;
+    const isTyping = (el) => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+    const onKey = (e) => {
+      if (isTyping(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === '/') { e.preventDefault(); setShowSearch(true); return; }
+      if (e.key === 'g') { gPending = true; clearTimeout(gTimer); gTimer = setTimeout(() => { gPending = false; }, 900); return; }
+      if (gPending) {
+        const dest = { h: '/', m: '/movies', t: '/tv-shows', r: '/top-rated', p: '/profile' }[e.key];
+        gPending = false;
+        if (dest) { e.preventDefault(); navigate(dest); }
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('keydown', onKey); clearTimeout(gTimer); };
+  }, [navigate]);
 
   const isActive = (path) => path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
 
@@ -150,6 +169,9 @@ export function Navbar() {
                   <button onClick={() => navigate('/profile')} className="w-full text-left px-4 py-3 text-sm text-white hover:bg-white/10 transition flex items-center gap-2.5">
                     <User size={14} className="text-muted" /> Profile
                   </button>
+                  <button onClick={() => navigate('/feed')} className="w-full text-left px-4 py-3 text-sm text-white hover:bg-white/10 transition flex items-center gap-2.5 border-t border-white/5">
+                    <Users size={14} className="text-muted" /> Activity
+                  </button>
                   <button onClick={() => navigate('/settings')} className="w-full text-left px-4 py-3 text-sm text-white hover:bg-white/10 transition flex items-center gap-2.5 border-t border-white/5">
                     <Settings size={14} className="text-muted" /> Settings
                   </button>
@@ -191,6 +213,8 @@ export function Navbar() {
           </div>
         )}
       </header>
+
+      <BottomNav onSearch={() => setShowSearch(true)} onFor={() => setShowMood(true)} />
 
       {showAuth   && <AuthModal onClose={() => setShowAuth(false)} />}
       {showSearch && <SearchOverlay onClose={() => setShowSearch(false)} />}

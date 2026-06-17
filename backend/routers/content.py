@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from deps import get_current_user
-from models import Review, User, WatchlistItem
+from models import EpisodeWatch, Review, User, WatchlistItem
 from schemas import ReviewIn, ReviewOut, WatchlistIn, WatchlistOut
 
 router = APIRouter(prefix="/api", tags=["content"])
@@ -135,6 +135,64 @@ def delete_review(
         Review.user_id == user.id,
         Review.media_type == media_type,
         Review.media_id == media_id,
+    ).delete()
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- TV episode tracking ----------------------------------------------------
+
+@router.get("/episodes/{tv_id}")
+def list_watched_episodes(
+    tv_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    rows = (
+        db.query(EpisodeWatch)
+        .filter(EpisodeWatch.user_id == user.id, EpisodeWatch.tv_id == str(tv_id))
+        .all()
+    )
+    return [{"season": r.season, "episode": r.episode} for r in rows]
+
+
+@router.post("/episodes/{tv_id}/{season}/{episode}", status_code=status.HTTP_204_NO_CONTENT)
+def mark_episode(
+    tv_id: str,
+    season: int,
+    episode: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    exists = (
+        db.query(EpisodeWatch)
+        .filter(
+            EpisodeWatch.user_id == user.id,
+            EpisodeWatch.tv_id == str(tv_id),
+            EpisodeWatch.season == season,
+            EpisodeWatch.episode == episode,
+        )
+        .first()
+    )
+    if not exists:
+        db.add(EpisodeWatch(user_id=user.id, tv_id=str(tv_id), season=season, episode=episode))
+        db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete("/episodes/{tv_id}/{season}/{episode}", status_code=status.HTTP_204_NO_CONTENT)
+def unmark_episode(
+    tv_id: str,
+    season: int,
+    episode: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    db.query(EpisodeWatch).filter(
+        EpisodeWatch.user_id == user.id,
+        EpisodeWatch.tv_id == str(tv_id),
+        EpisodeWatch.season == season,
+        EpisodeWatch.episode == episode,
     ).delete()
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

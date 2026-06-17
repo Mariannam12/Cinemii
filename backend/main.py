@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import ALLOWED_ORIGINS, ALLOWED_ORIGIN_REGEX
 from database import Base, engine, ensure_user_columns
-from routers import account, auth, content, library, stream, realtime, tmdb_proxy
+from routers import account, auth, content, library, social, stream, realtime, tmdb_proxy
 
 # Create tables on startup (fine for SQLite/staging; use Alembic for prod).
 Base.metadata.create_all(bind=engine)
@@ -43,6 +43,8 @@ app.include_router(auth.router)
 app.include_router(account.router)
 app.include_router(library.router)
 app.include_router(content.router)
+app.include_router(social.router)
+app.include_router(social.feed_router)
 app.include_router(stream.router)
 app.include_router(realtime.router)
 app.include_router(tmdb_proxy.router)

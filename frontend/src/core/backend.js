@@ -77,6 +77,17 @@ export const api = {
   saveReview:     (data)                  => request('POST',  '/api/reviews',               { body: data, auth: true }),
   deleteReview:   (type, id)              => request('DELETE',`/api/reviews/${type}/${id}`, { auth: true }),
 
+  // TV episode tracking
+  listEpisodes:   (tvId)                  => request('GET',   `/api/episodes/${tvId}`,      { auth: true }),
+  markEpisode:    (tvId, s, e)            => request('POST',  `/api/episodes/${tvId}/${s}/${e}`,   { auth: true }),
+  unmarkEpisode:  (tvId, s, e)            => request('DELETE',`/api/episodes/${tvId}/${s}/${e}`,   { auth: true }),
+
+  // Social
+  publicProfile:  (username)              => request('GET',   `/api/users/${username}`,     { auth: true }),
+  follow:         (username)              => request('POST',  `/api/users/${username}/follow`,   { auth: true }),
+  unfollow:       (username)              => request('DELETE',`/api/users/${username}/follow`,   { auth: true }),
+  feed:           ()                      => request('GET',   '/api/feed',                  { auth: true }),
+
   streamInfo:     (type, id)              => request('GET',  `/api/stream/info/${type}/${id}`, { auth: true }),
 
   getProgress:    (type, id)              => request('GET',  `/api/watch-progress/${type}/${id}`, { auth: true }),

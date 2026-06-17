@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { api } from '../../core/backend';
 
 const GOOGLE_CLIENT_ID = '277488906528-8rk7dpimukrm1kivdq019eueoc4krcdp.apps.googleusercontent.com';
@@ -10,6 +11,7 @@ export function AuthModal({ onClose }) {
   const [loading, setLoading]       = useState(false);
   const [msg, setMsg]               = useState(null); // { text, ok }
   const googleBtnRef                = useRef(null);
+  const trapRef                     = useFocusTrap(true);
 
   // Form state
   const [name, setName]             = useState('');
@@ -108,7 +110,7 @@ export function AuthModal({ onClose }) {
       className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-overlay"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="glass-dark w-full max-w-md rounded-3xl p-8 shadow-2xl relative animate-pop">
+      <div ref={trapRef} role="dialog" aria-modal="true" aria-label="Sign in to Cinemii" className="glass-dark w-full max-w-md rounded-3xl p-8 shadow-2xl relative animate-pop">
         {/* Close */}
         <button
           onClick={onClose}

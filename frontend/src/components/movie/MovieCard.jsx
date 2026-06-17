@@ -32,6 +32,8 @@ export const MovieCard = memo(function MovieCard({ movie, mediaType = 'movie', o
   const handleWatch = useCallback((e) => { e.stopPropagation(); onWatchClick ? onWatchClick(movie, type) : goDetail(); }, [onWatchClick, movie, type, goDetail]);
 
   const onEnter = useCallback(() => {
+    // Only autoplay trailers on real hover devices (not touch / mobile data).
+    if (typeof window !== 'undefined' && !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
     timerRef.current = setTimeout(async () => {
       if (trailerRef.current === undefined) {
         try {
@@ -106,8 +108,9 @@ export const MovieCard = memo(function MovieCard({ movie, mediaType = 'movie', o
           </div>
         )}
 
-        {/* Hover overlay — Netflix-style circular icon buttons + match % */}
-        <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200">
+        {/* Action overlay — Netflix-style circular buttons + match %.
+            Hover-reveal on desktop; always visible on touch devices. */}
+        <div className="card-actions absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200">
           {match >= 60 && (
             <p className="text-green-400 text-xs font-bold mb-1.5">{match}% Match</p>
           )}

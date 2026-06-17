@@ -9,7 +9,11 @@ import { MovieSection } from '../components/home/MovieSection';
 import { RankedRow } from '../components/home/RankedRow';
 import { LiveStreams } from '../components/home/LiveStreams';
 import { ContinueWatching } from '../components/home/ContinueWatching';
+import { BecauseYouWatched } from '../components/home/BecauseYouWatched';
+import { GenreRow } from '../components/home/GenreRow';
+import { TastePicker } from '../components/home/TastePicker';
 import { CinemaPlayer } from '../components/player/CinemaPlayer';
+import { getTaste, hasChosenTaste, genreName } from '../core/taste';
 import { useTMDB } from '../hooks/useTMDB';
 import { useLazyTMDB } from '../hooks/useLazyTMDB';
 import { usePersonalizedRecs } from '../hooks/usePersonalizedRecs';
@@ -37,6 +41,8 @@ export function Home() {
   const navigate            = useNavigate();
   const { loggedIn }        = useAuth();
   const { movies: recs, loading: recsLoading } = usePersonalizedRecs();
+  const [showTaste, setShowTaste] = useState(() => !hasChosenTaste());
+  const [taste, setTasteState]    = useState(() => getTaste());
 
   // Above-the-fold: eager
   const trending   = useTMDB(fetchTrending);
@@ -80,6 +86,14 @@ export function Home() {
           <MovieSection title="Recommended For You" icon={Sparkles} movies={recs} loading={recsLoading} onWatchClick={handleWatch} />
         )}
 
+        {/* Because you watched … */}
+        {loggedIn && <BecauseYouWatched onWatchClick={handleWatch} />}
+
+        {/* Taste-based picks (from the first-run genre picker) */}
+        {taste.slice(0, 4).map(id => (
+          <GenreRow key={`taste-${id}`} genreId={id} title={`${genreName(id)} picks for you`} icon={Sparkles} onWatchClick={handleWatch} />
+        ))}
+
         <MovieSection title="Now Playing"   icon={Clapperboard} movies={slice(nowPlaying.data)} loading={nowPlaying.loading} onWatchClick={handleWatch} onSeeAll={toMovies} />
 
         {/* Netflix-style ranked row */}
@@ -108,6 +122,10 @@ export function Home() {
           title={player.title}
           onClose={() => setPlayer(null)}
         />
+      )}
+
+      {showTaste && (
+        <TastePicker onDone={(ids) => { setTasteState(ids); setShowTaste(false); }} />
       )}
     </div>
   );
