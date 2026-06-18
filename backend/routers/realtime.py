@@ -57,7 +57,8 @@ async def chat_ws(websocket: WebSocket, name: Optional[str] = Query("Guest")):
 
 async def _broadcast_chat(msg: dict):
     dead = []
-    for conn in _chat_connections:
+    # Snapshot: a disconnect can mutate _chat_connections during an await.
+    for conn in list(_chat_connections):
         try:
             await conn["ws"].send_json(msg)
         except Exception:
@@ -120,7 +121,8 @@ def _room_names(code: str) -> list[str]:
 
 async def _broadcast_room(code: str, msg: dict, exclude: Optional[WebSocket] = None):
     dead = []
-    for entry in _rooms.get(code, []):
+    # Snapshot: a disconnect can mutate the room list during an await.
+    for entry in list(_rooms.get(code, [])):
         if entry["ws"] is exclude:
             continue
         try:
@@ -138,7 +140,9 @@ async def _broadcast_room(code: str, msg: dict, exclude: Optional[WebSocket] = N
 def list_rooms():
     """Public list of active watch-together rooms, newest first."""
     out = []
-    for code, members in _rooms.items():
+    # Snapshot: this sync endpoint runs in a threadpool while async WS handlers
+    # mutate _rooms in the event loop — iterate a copy to avoid a race.
+    for code, members in list(_rooms.items()):
         meta = _room_meta.get(code, {})
         if not meta.get("public", True) or not members:
             continue
