@@ -130,6 +130,14 @@ def send_friend_request(
     )
 
     if existing:
+        # A prior request that was rejected should be re-openable rather than
+        # permanently blocked by the unique constraint.
+        if existing.status == "rejected":
+            existing.from_user_id = current_user.id
+            existing.to_user_id = user_id
+            existing.status = "pending"
+            db.commit()
+            return {"ok": True, "status": "pending"}
         return {"ok": True, "status": existing.status}
 
     request = FriendRequest(
@@ -164,6 +172,7 @@ def incoming_requests(
             "created_at": req.created_at.isoformat() if req.created_at else None,
         }
         for req in requests
+        if req.from_user is not None  # skip requests whose sender was deleted
     ]
 
 

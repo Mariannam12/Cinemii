@@ -21,34 +21,43 @@ export function AuthModal({ onClose }) {
   const [otp, setOtp]               = useState('');
   const [forgot, setForgot]         = useState(false); // forgot-password step
 
-  // Google Sign-In button
+  // Google Sign-In button. The GSI script loads async, so poll until it's
+  // ready (otherwise the button silently never renders on a fast modal open).
   useEffect(() => {
-    const gsi = window.google?.accounts?.id;
-    if (!gsi || !googleBtnRef.current) return;
-    gsi.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: async (response) => {
-        setLoading(true);
-        setMsg(null);
-        try {
-          const result = await api.google(response.credential);
-          login(result.access_token, result.user);
-          setMsg({ text: `Welcome, ${result.user.name}!`, ok: true });
-          setTimeout(onClose, 900);
-        } catch (e) {
-          setMsg({ text: e.message, ok: false });
-        } finally {
-          setLoading(false);
-        }
-      },
-    });
-    gsi.renderButton(googleBtnRef.current, {
-      theme: 'filled_black',
-      size: 'large',
-      shape: 'rectangular',
-      width: googleBtnRef.current.offsetWidth || 320,
-      text: 'continue_with',
-    });
+    let tries = 0, timer = null;
+    const tryRender = () => {
+      const gsi = window.google?.accounts?.id;
+      if (!gsi || !googleBtnRef.current) {
+        if (tries++ < 40) { timer = setTimeout(tryRender, 150); }
+        return;
+      }
+      gsi.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: async (response) => {
+          setLoading(true);
+          setMsg(null);
+          try {
+            const result = await api.google(response.credential);
+            login(result.access_token, result.user);
+            setMsg({ text: `Welcome, ${result.user.name}!`, ok: true });
+            setTimeout(onClose, 900);
+          } catch (e) {
+            setMsg({ text: e.message, ok: false });
+          } finally {
+            setLoading(false);
+          }
+        },
+      });
+      gsi.renderButton(googleBtnRef.current, {
+        theme: 'filled_black',
+        size: 'large',
+        shape: 'rectangular',
+        width: googleBtnRef.current.offsetWidth || 320,
+        text: 'continue_with',
+      });
+    };
+    tryRender();
+    return () => clearTimeout(timer);
   }, [login, onClose]);
 
   // Close on Escape

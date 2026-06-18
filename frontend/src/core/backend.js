@@ -62,6 +62,9 @@ export const api = {
   twofaEnable:    (code)                  => request('POST',  '/api/auth/2fa/enable',       { body: { code }, auth: true }),
   twofaDisable:   (code)                  => request('POST',  '/api/auth/2fa/disable',      { body: { code }, auth: true }),
   deleteAccount:  (password)              => request('DELETE','/api/auth/account',          { body: { password }, auth: true }),
+  twofaBackupCodes:(code)                 => request('POST',  '/api/auth/2fa/backup-codes', { body: { code }, auth: true }),
+  forgotPassword: (email)                 => request('POST',  '/api/auth/forgot-password',  { body: { email } }),
+  resetPassword:  (token, new_password)   => request('POST',  '/api/auth/reset-password',   { body: { token, new_password } }),
 
   // TV episode tracking
   listEpisodes:   (tvId)                  => request('GET',   `/api/episodes/${tvId}`,      { auth: true }),

@@ -1,5 +1,6 @@
 """Per-user library: favorites and watch progress (all JWT-protected)."""
 
+from datetime import datetime, timezone
 from typing import List
 
 from fastapi import APIRouter, Depends, Response, status
@@ -103,7 +104,7 @@ def get_progress(
             media_id=media_id,
             position_seconds=0.0,
             duration_seconds=0.0,
-            updated_at=__import__("datetime").datetime.utcnow(),
+            updated_at=datetime.now(timezone.utc),
         )
     return row
 

@@ -45,7 +45,7 @@ export function Feed() {
 
         <div className="flex flex-col gap-3">
           {items?.map((a, i) => {
-            const u = a.user;
+            const u = a.user || {};
             const uInitial = u.name?.[0]?.toUpperCase() || '?';
             return (
               <div key={i} className="flex gap-3 glass rounded-2xl p-4 items-center">

@@ -122,6 +122,8 @@ def activity_feed(db: Session = Depends(get_db), me: User = Depends(get_current_
     )
     for r in reviews:
         u = users.get(r.user_id)
+        if not u:
+            continue
         items.append({
             "kind": "review", "user": {"name": u.name, "username": u.username, "picture": u.picture},
             "media_type": r.media_type, "media_id": r.media_id, "title": r.title,
@@ -135,6 +137,8 @@ def activity_feed(db: Session = Depends(get_db), me: User = Depends(get_current_
     )
     for f in favorites:
         u = users.get(f.user_id)
+        if not u:
+            continue
         items.append({
             "kind": "favorite", "user": {"name": u.name, "username": u.username, "picture": u.picture},
             "media_type": f.media_type, "media_id": f.media_id, "title": f.title,

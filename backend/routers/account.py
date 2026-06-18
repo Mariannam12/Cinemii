@@ -10,7 +10,10 @@ from database import get_db
 from ratelimit import rate_limiter
 from deps import get_current_user
 from mailer import send_email
-from models import User
+from models import (
+    EpisodeWatch, Follow, FriendRequest, Friendship, Message, Review, User,
+    WatchlistItem,
+)
 from schemas import (
     BackupCodesOut,
     DeleteAccountIn,
@@ -208,6 +211,27 @@ def delete_account(
             body.password, current.hashed_password
         ):
             raise HTTPException(401, "Incorrect password.")
+
+    # Remove dependent rows first. Only `progress`/`favorites` cascade via the
+    # relationship; the newer tables have plain FKs, so a bare delete would
+    # FK-violate on Postgres (and orphan rows on SQLite). Clean them explicitly.
+    uid = current.id
+    db.query(WatchlistItem).filter(WatchlistItem.user_id == uid).delete()
+    db.query(Review).filter(Review.user_id == uid).delete()
+    db.query(EpisodeWatch).filter(EpisodeWatch.user_id == uid).delete()
+    db.query(Follow).filter(
+        (Follow.follower_id == uid) | (Follow.following_id == uid)
+    ).delete()
+    db.query(FriendRequest).filter(
+        (FriendRequest.from_user_id == uid) | (FriendRequest.to_user_id == uid)
+    ).delete()
+    db.query(Friendship).filter(
+        (Friendship.user_id == uid) | (Friendship.friend_id == uid)
+    ).delete()
+    db.query(Message).filter(
+        (Message.from_user_id == uid) | (Message.to_user_id == uid)
+    ).delete()
+
     db.delete(current)
     db.commit()
     return None
