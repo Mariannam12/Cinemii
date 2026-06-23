@@ -52,6 +52,7 @@ def ensure_user_columns():
         "two_factor_enabled": f"BOOLEAN NOT NULL DEFAULT {false_default}",
         "two_factor_secret": "VARCHAR(64)",
         "backup_codes": "VARCHAR(2000)",
+        "last_seen": "TIMESTAMP",
     }
 
     with engine.begin() as conn:

@@ -19,6 +19,21 @@ export function Messages() {
   }, []);
 
   useEffect(() => {
+  if (api.heartbeat) {
+  api.heartbeat().catch(() => {});
+}
+
+  const timer = setInterval(() => {
+    if (api.heartbeat) {
+  api.heartbeat().catch(() => {});
+}
+    loadFriends();
+  }, 30000);
+
+  return () => clearInterval(timer);
+}, []);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
@@ -173,10 +188,14 @@ export function Messages() {
                     )}
                   </div>
 
-                  <span className="absolute -right-1 -bottom-1 w-4 h-4 rounded-full bg-white/30 ring-2 ring-bg" />
-                </div>
+                  <span
+  className={`absolute -right-1 -bottom-1 w-4 h-4 rounded-full ring-2 ring-bg ${
+    friend.online ? 'bg-green-500' : 'bg-white/30'
+  }`}
+/>
+</div>
 
-                <div className="flex-1 min-w-0">
+<div className="flex-1 min-w-0">
                   <div className="font-bold text-white truncate">{friend.name}</div>
                   <div className="text-xs text-muted truncate">
                     @{friend.username || 'cinemii-user'}
@@ -214,7 +233,9 @@ export function Messages() {
 
                   <div>
                     <div className="font-bold text-xl text-white">{selected.name}</div>
-                    <div className="text-xs text-muted">Status updates soon</div>
+                    <div className={selected.online ? 'text-xs text-green-400' : 'text-xs text-muted'}>
+  {selected.online ? 'Online' : 'Offline'}
+</div>
                   </div>
                 </div>
 

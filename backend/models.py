@@ -38,6 +38,7 @@ class User(Base):
     two_factor_secret = Column(String(64), nullable=True)
 
     created_at = Column(DateTime, default=_utcnow)
+    last_seen = Column(DateTime, nullable=True)
 
     progress = relationship(
         "WatchProgress",
