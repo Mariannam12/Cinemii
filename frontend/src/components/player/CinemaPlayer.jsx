@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X, Maximize, Keyboard } from "lucide-react";
 
-const PLAYER_BASE_URL = "https://player.yourdomain.com/embed/movie";
+const PLAYER_BASE_URL = "https://www.2embed.online/2embed.php?id=tt${mediaId}";
 
 function buildMovieEmbedUrl(mediaId) {
   if (!mediaId) return "";
