@@ -3,22 +3,14 @@ import { X, Maximize, Keyboard } from "lucide-react";
 
 const PLAYER_BASE_URL = "https://www.2embed.online/embed/movie";
 
-function normalizeImdbId(mediaId) {
+function buildMovieEmbedUrl(mediaId) {
   if (!mediaId) return "";
 
   const id = String(mediaId).trim();
 
   if (!id) return "";
 
-  return id.startsWith("tt") ? id : `tt${id}`;
-}
-
-function buildMovieEmbedUrl(mediaId) {
-  const imdbId = normalizeImdbId(mediaId);
-
-  if (!imdbId) return "";
-
-  return `${PLAYER_BASE_URL}/${encodeURIComponent(imdbId)}`;
+  return `${PLAYER_BASE_URL}/${encodeURIComponent(id)}`;
 }
 
 export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
@@ -30,8 +22,9 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
     return buildMovieEmbedUrl(mediaId);
   }, [mediaType, mediaId]);
 
-  const displayImdbId = useMemo(() => {
-    return normalizeImdbId(mediaId);
+  const displayId = useMemo(() => {
+    if (!mediaId) return "";
+    return String(mediaId).trim();
   }, [mediaId]);
 
   const error = useMemo(() => {
@@ -98,7 +91,6 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
         ref={boxRef}
         className="relative w-full max-w-5xl rounded-2xl overflow-hidden bg-zinc-950 border border-white/10 shadow-2xl"
       >
-        {/* Top control bar */}
         <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-end gap-2 p-3 bg-gradient-to-b from-black/80 to-transparent">
           <button
             type="button"
@@ -131,7 +123,6 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
           </button>
         </div>
 
-        {/* Shortcuts overlay */}
         {showHelp && (
           <div
             className="absolute top-14 right-3 z-20 rounded-xl p-4 text-xs text-white bg-black/80 shadow-xl w-52 border border-white/10"
@@ -151,7 +142,6 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
           </div>
         )}
 
-        {/* Iframe player */}
         {error ? (
           <div className="aspect-video flex items-center justify-center text-white bg-zinc-900">
             <div className="text-center px-6">
@@ -172,15 +162,14 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
           />
         )}
 
-        {/* Bottom bar */}
         <div className="px-4 py-3 bg-zinc-950 border-t border-white/10 flex items-center justify-between gap-4">
           <span className="text-white font-semibold text-sm truncate">
             {title || "Now Playing"}
           </span>
 
-          {displayImdbId && (
+          {displayId && (
             <span className="text-gray-400 text-xs shrink-0">
-              IMDb: {displayImdbId}
+              ID: {displayId}
             </span>
           )}
         </div>
