@@ -6,7 +6,11 @@ const PLAYER_BASE_URL = "https://www.2embed.online/embed/movie";
 function buildMovieEmbedUrl(mediaId) {
   if (!mediaId) return "";
 
-  const id = String(mediaId);
+  const id = String(mediaId).trim();
+
+  // Only add "tt" if the ID is an IMDb number without the prefix.
+  // Example: "1301421" -> "tt1301421"
+  // Example: "tt1301421" -> "tt1301421"
   const imdbId = id.startsWith("tt") ? id : `tt${id}`;
 
   return `${PLAYER_BASE_URL}/${encodeURIComponent(imdbId)}`;
@@ -20,9 +24,6 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
     if (mediaType !== "movie") return "";
     return buildMovieEmbedUrl(mediaId);
   }, [mediaType, mediaId]);
-
-  console.log("CinemaPlayer mediaId:", mediaId);
-  console.log("CinemaPlayer iframeUrl:", iframeUrl);
 
   const error = useMemo(() => {
     if (mediaType !== "movie") {
@@ -53,15 +54,14 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
 
   useEffect(() => {
     const onKey = (e) => {
-      switch (e.key.toLowerCase()) {
-        case "escape":
-          handleClose();
-          break;
-        case "f":
-          toggleFullscreen();
-          break;
-        default:
-          break;
+      const key = e.key.toLowerCase();
+
+      if (key === "escape") {
+        handleClose();
+      }
+
+      if (key === "f") {
+        toggleFullscreen();
       }
     };
 
@@ -85,6 +85,7 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
         ref={boxRef}
         className="relative w-full max-w-5xl mx-4 rounded-2xl overflow-hidden bg-black shadow-2xl"
       >
+        {/* Top control bar */}
         <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-end gap-2 p-3 bg-gradient-to-b from-black/70 to-transparent">
           <button
             type="button"
@@ -117,6 +118,7 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
           </button>
         </div>
 
+        {/* Shortcuts overlay */}
         {showHelp && (
           <div
             className="absolute top-14 right-3 z-20 rounded-xl p-4 text-xs text-white bg-black/80 shadow-xl w-52"
@@ -136,6 +138,7 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
           </div>
         )}
 
+        {/* Iframe player */}
         {error ? (
           <div className="aspect-video flex items-center justify-center text-white">
             <div className="text-center px-6">
@@ -158,13 +161,15 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
           />
         )}
 
+        {/* Bottom bar */}
         <div className="px-4 py-3 bg-black/80 flex items-center justify-between gap-4">
           <span className="text-white font-semibold text-sm truncate">
             {title || "Now Playing"}
           </span>
+
           {mediaId && (
             <span className="text-gray-400 text-xs shrink-0">
-              ID: {mediaId}
+              IMDb: {String(mediaId).startsWith("tt") ? mediaId : `tt${mediaId}`}
             </span>
           )}
         </div>
