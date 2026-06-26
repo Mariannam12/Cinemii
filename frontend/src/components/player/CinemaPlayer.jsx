@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X, Maximize, Keyboard } from "lucide-react";
 
-const PLAYER_BASE_URL = `https://www.2embed.online/embed/movie/tt${mediaId}`;
+const imdbId = mediaId.startsWith("tt") ? mediaId : `tt${mediaId}`;
+
+const PLAYER_BASE_URL = `https://www.2embed.online/embed/movie/${imdbId}`;
 
 function buildMovieEmbedUrl(mediaId) {
   if (!mediaId) return "";
