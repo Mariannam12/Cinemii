@@ -3,15 +3,20 @@ import { X, Maximize, Keyboard } from "lucide-react";
 
 const PLAYER_BASE_URL = "https://www.2embed.online/embed/movie";
 
-function buildMovieEmbedUrl(mediaId) {
+function normalizeImdbId(mediaId) {
   if (!mediaId) return "";
 
   const id = String(mediaId).trim();
 
-  // Only add "tt" if the ID is an IMDb number without the prefix.
-  // Example: "1301421" -> "tt1301421"
-  // Example: "tt1301421" -> "tt1301421"
-  const imdbId = id.startsWith("tt") ? id : `tt${id}`;
+  if (!id) return "";
+
+  return id.startsWith("tt") ? id : `tt${id}`;
+}
+
+function buildMovieEmbedUrl(mediaId) {
+  const imdbId = normalizeImdbId(mediaId);
+
+  if (!imdbId) return "";
 
   return `${PLAYER_BASE_URL}/${encodeURIComponent(imdbId)}`;
 }
@@ -25,6 +30,10 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
     return buildMovieEmbedUrl(mediaId);
   }, [mediaType, mediaId]);
 
+  const displayImdbId = useMemo(() => {
+    return normalizeImdbId(mediaId);
+  }, [mediaId]);
+
   const error = useMemo(() => {
     if (mediaType !== "movie") {
       return "Playback is currently available for movies only.";
@@ -34,8 +43,12 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
       return "Playback unavailable: missing movie ID.";
     }
 
+    if (!iframeUrl) {
+      return "Playback unavailable: invalid movie ID.";
+    }
+
     return null;
-  }, [mediaType, mediaId]);
+  }, [mediaType, mediaId, iframeUrl]);
 
   const toggleFullscreen = useCallback(() => {
     const el = boxRef.current;
@@ -76,21 +89,21 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-md"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) handleClose();
       }}
     >
       <div
         ref={boxRef}
-        className="relative w-full max-w-5xl mx-4 rounded-2xl overflow-hidden bg-black shadow-2xl"
+        className="relative w-full max-w-5xl rounded-2xl overflow-hidden bg-zinc-950 border border-white/10 shadow-2xl"
       >
         {/* Top control bar */}
-        <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-end gap-2 p-3 bg-gradient-to-b from-black/70 to-transparent">
+        <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-end gap-2 p-3 bg-gradient-to-b from-black/80 to-transparent">
           <button
             type="button"
             onClick={toggleFullscreen}
-            className="w-8 h-8 rounded-lg bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition"
+            className="w-8 h-8 rounded-lg bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition"
             title="Fullscreen (F)"
             aria-label="Fullscreen"
           >
@@ -100,7 +113,7 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
           <button
             type="button"
             onClick={() => setHelp((v) => !v)}
-            className="w-8 h-8 rounded-lg bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition"
+            className="w-8 h-8 rounded-lg bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition"
             title="Keyboard shortcuts"
             aria-label="Keyboard shortcuts"
           >
@@ -110,7 +123,7 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
           <button
             type="button"
             onClick={handleClose}
-            className="w-8 h-8 rounded-lg bg-black/50 hover:bg-red-600 text-white flex items-center justify-center transition"
+            className="w-8 h-8 rounded-lg bg-black/60 hover:bg-red-600 text-white flex items-center justify-center transition"
             aria-label="Close"
             title="Close (Esc)"
           >
@@ -121,7 +134,7 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
         {/* Shortcuts overlay */}
         {showHelp && (
           <div
-            className="absolute top-14 right-3 z-20 rounded-xl p-4 text-xs text-white bg-black/80 shadow-xl w-52"
+            className="absolute top-14 right-3 z-20 rounded-xl p-4 text-xs text-white bg-black/80 shadow-xl w-52 border border-white/10"
             onClick={() => setHelp(false)}
           >
             <p className="font-bold mb-2">Keyboard shortcuts</p>
@@ -140,7 +153,7 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
 
         {/* Iframe player */}
         {error ? (
-          <div className="aspect-video flex items-center justify-center text-white">
+          <div className="aspect-video flex items-center justify-center text-white bg-zinc-900">
             <div className="text-center px-6">
               <p className="text-lg font-semibold mb-2">Playback unavailable</p>
               <p className="text-sm text-gray-400">{error}</p>
@@ -150,9 +163,7 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
           <iframe
             src={iframeUrl}
             title={title || "Movie Player"}
-            className="w-full aspect-video bg-black"
-            width="100%"
-            height="100%"
+            className="w-full aspect-video bg-zinc-900"
             frameBorder="0"
             allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
             allowFullScreen
@@ -162,14 +173,14 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
         )}
 
         {/* Bottom bar */}
-        <div className="px-4 py-3 bg-black/80 flex items-center justify-between gap-4">
+        <div className="px-4 py-3 bg-zinc-950 border-t border-white/10 flex items-center justify-between gap-4">
           <span className="text-white font-semibold text-sm truncate">
             {title || "Now Playing"}
           </span>
 
-          {mediaId && (
+          {displayImdbId && (
             <span className="text-gray-400 text-xs shrink-0">
-              IMDb: {String(mediaId).startsWith("tt") ? mediaId : `tt${mediaId}`}
+              IMDb: {displayImdbId}
             </span>
           )}
         </div>
