@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X, Maximize, Keyboard } from "lucide-react";
 
-const imdbId = mediaId.startsWith("tt") ? mediaId : `tt${mediaId}`;
-
-const PLAYER_BASE_URL = `https://www.2embed.online/embed/movie/${imdbId}`;
+const PLAYER_BASE_URL = "https://www.2embed.online/embed/movie";
 
 function buildMovieEmbedUrl(mediaId) {
   if (!mediaId) return "";
-  return `${PLAYER_BASE_URL}/${encodeURIComponent(String(mediaId))}`;
+
+  const id = String(mediaId);
+  const imdbId = id.startsWith("tt") ? id : `tt${id}`;
+
+  return `${PLAYER_BASE_URL}/${encodeURIComponent(imdbId)}`;
 }
 
 export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
@@ -19,13 +21,16 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
     return buildMovieEmbedUrl(mediaId);
   }, [mediaType, mediaId]);
 
+  console.log("CinemaPlayer mediaId:", mediaId);
+  console.log("CinemaPlayer iframeUrl:", iframeUrl);
+
   const error = useMemo(() => {
     if (mediaType !== "movie") {
       return "Playback is currently available for movies only.";
     }
 
     if (!mediaId) {
-      return "Playback unavailable: missing TMDB movie ID.";
+      return "Playback unavailable: missing movie ID.";
     }
 
     return null;
@@ -80,7 +85,6 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
         ref={boxRef}
         className="relative w-full max-w-5xl mx-4 rounded-2xl overflow-hidden bg-black shadow-2xl"
       >
-        {/* Top control bar */}
         <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-end gap-2 p-3 bg-gradient-to-b from-black/70 to-transparent">
           <button
             type="button"
@@ -113,7 +117,6 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
           </button>
         </div>
 
-        {/* Shortcuts overlay */}
         {showHelp && (
           <div
             className="absolute top-14 right-3 z-20 rounded-xl p-4 text-xs text-white bg-black/80 shadow-xl w-52"
@@ -133,7 +136,6 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
           </div>
         )}
 
-        {/* Iframe player */}
         {error ? (
           <div className="aspect-video flex items-center justify-center text-white">
             <div className="text-center px-6">
@@ -156,12 +158,15 @@ export function CinemaPlayer({ mediaType = "movie", mediaId, title, onClose }) {
           />
         )}
 
-        {/* Bottom bar */}
         <div className="px-4 py-3 bg-black/80 flex items-center justify-between gap-4">
           <span className="text-white font-semibold text-sm truncate">
             {title || "Now Playing"}
           </span>
-          {mediaId && <span className="text-gray-400 text-xs shrink-0">TMDB: {mediaId}</span>}
+          {mediaId && (
+            <span className="text-gray-400 text-xs shrink-0">
+              ID: {mediaId}
+            </span>
+          )}
         </div>
       </div>
     </div>
