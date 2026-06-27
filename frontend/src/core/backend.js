@@ -85,6 +85,9 @@ export const api = {
 
   // Licensing CMS (admin only)
   adminListCatalog:   ()         => request('GET',    '/api/admin/catalog',          { auth: true }),
+  adminListSources:   ()         => request('GET',    '/api/admin/catalog/sources',  { auth: true }),
+  adminArchiveSearch: (q)        => request('GET',    `/api/admin/catalog/archive/search?q=${encodeURIComponent(q)}`, { auth: true }),
+  adminArchiveFiles:  (id)       => request('GET',    `/api/admin/catalog/archive/files/${encodeURIComponent(id)}`,   { auth: true }),
   adminCreateCatalog: (data)     => request('POST',   '/api/admin/catalog',          { body: data, auth: true }),
   adminUpdateCatalog: (id, data) => request('PUT',    `/api/admin/catalog/${id}`,    { body: data, auth: true }),
   adminDeleteCatalog: (id)       => request('DELETE', `/api/admin/catalog/${id}`,    { auth: true }),

@@ -71,6 +71,21 @@ ADMIN_EMAILS = [
     if e.strip()
 ]
 
+# --- Media library / cloud storage (CMS source auto-listing) ----------------
+# Used by the CMS to list video files you control so you can pick a source
+# instead of pasting a URL. Leave the bucket vars unset to disable cloud listing.
+# S3-compatible: works with AWS S3, Cloudflare R2, MinIO, etc.
+S3_BUCKET = os.environ.get("CINEMII_S3_BUCKET")
+S3_ENDPOINT_URL = os.environ.get("CINEMII_S3_ENDPOINT_URL")  # set for R2/MinIO; unset for AWS
+S3_REGION = os.environ.get("CINEMII_S3_REGION")
+S3_ACCESS_KEY_ID = os.environ.get("CINEMII_S3_ACCESS_KEY_ID")
+S3_SECRET_ACCESS_KEY = os.environ.get("CINEMII_S3_SECRET_ACCESS_KEY")
+S3_PREFIX = os.environ.get("CINEMII_S3_PREFIX", "")
+# Public base URL for objects (CDN / public bucket domain), e.g.
+# https://media.cinemii.com  or  https://pub-xxxx.r2.dev . If unset, the CMS
+# falls back to temporary presigned URLs (fine for testing, not for storing).
+S3_PUBLIC_BASE_URL = os.environ.get("CINEMII_S3_PUBLIC_BASE_URL", "")
+
 # --- TMDB -------------------------------------------------------------------
 # Kept server-side so the key is never shipped in the frontend bundle.
 TMDB_API_KEY = os.environ.get(

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Search, Trash2, Pencil, Plus, ShieldCheck, X } from "lucide-react";
+import { Search, Trash2, Pencil, Plus, ShieldCheck, X, Film, ExternalLink } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
 import { api } from "../core/backend";
@@ -42,6 +42,15 @@ export function Admin() {
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
 
+  const [sources, setSources] = useState({ media: [], bucket: { configured: false, items: [], error: null } });
+
+  // Internet Archive search (public-domain / CC films)
+  const [iaQ, setIaQ] = useState("");
+  const [iaResults, setIaResults] = useState([]);
+  const [iaSearching, setIaSearching] = useState(false);
+  const [iaItem, setIaItem] = useState(null); // { identifier, title, details_url, license_url, files }
+  const [iaLoadingFiles, setIaLoadingFiles] = useState(false);
+
   const isAdmin = loggedIn && user?.is_admin;
 
   const load = useCallback(() => {
@@ -56,6 +65,11 @@ export function Admin() {
   useEffect(() => {
     if (isAdmin) load();
   }, [isAdmin, load]);
+
+  // Auto-list playable sources you control (server media + your cloud bucket).
+  useEffect(() => {
+    if (isAdmin) api.adminListSources().then(setSources).catch(() => {});
+  }, [isAdmin]);
 
   if (!isAdmin) {
     return (
@@ -74,6 +88,66 @@ export function Admin() {
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const resetForm = () => setForm(EMPTY);
+
+  // Fill the source fields from a picked library item (server file or bucket object).
+  const pickSource = (s) => {
+    setForm((f) => ({ ...f, source_type: s.source_type, source_url: s.source_url }));
+    if (s.ephemeral) {
+      toast("Temporary preview URL — set CINEMII_S3_PUBLIC_BASE_URL for a permanent link", "info");
+    }
+  };
+
+  const fmtSize = (b) => (b > 1048576 ? `${(b / 1048576).toFixed(0)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
+
+  const iaSearch = async (e) => {
+    e?.preventDefault();
+    if (!iaQ.trim()) return;
+    setIaSearching(true);
+    setIaItem(null);
+    try {
+      setIaResults(await api.adminArchiveSearch(iaQ.trim()));
+    } catch (err) {
+      toast(err.message || "Archive search failed", "error");
+    } finally {
+      setIaSearching(false);
+    }
+  };
+
+  const iaOpen = async (item) => {
+    setIaLoadingFiles(true);
+    setIaItem({ ...item, files: [] });
+    try {
+      setIaItem(await api.adminArchiveFiles(item.identifier));
+    } catch (err) {
+      toast(err.message || "Could not load files", "error");
+      setIaItem(null);
+    } finally {
+      setIaLoadingFiles(false);
+    }
+  };
+
+  // Map a (reported, unverified) archive.org license URL to a short label.
+  const ccLabel = (url) => {
+    if (!url) return "";
+    if (/zero|publicdomain|\/mark/i.test(url)) return "Public Domain (reported)";
+    const m = url.match(/licenses\/([a-z-]+)/i);
+    return m ? `CC ${m[1].toUpperCase()} (reported)` : "Licensed (reported)";
+  };
+
+  // Pick a playable file from an Archive item: fill the source + license provenance.
+  // The license is the item's REPORTED tag (unverified) — admin must confirm.
+  const iaPick = (file, item) => {
+    setForm((f) => ({
+      ...f,
+      source_type: file.source_type,
+      source_url: file.source_url,
+      license_type: f.license_type || ccLabel(item.license_url),
+      rights_holder: f.rights_holder || "Internet Archive",
+      license_ref: item.details_url || f.license_ref,
+      title: f.title || item.title || "",
+    }));
+    toast("Source filled — VERIFY this item is genuinely public-domain/licensed before publishing", "info");
+  };
 
   const runSearch = async (e) => {
     e?.preventDefault();
@@ -244,10 +318,140 @@ export function Admin() {
             <input value={form.license_type} onChange={(e) => set("license_type", e.target.value)} className={inputCls} placeholder="Owned / CC-BY / Distributor…" />
           </div>
 
+          {/* Pick from your own libraries (no manual URL typing) */}
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-muted mb-1">Pick from your library — sources you control</label>
+            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3 space-y-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-wide text-muted mb-1.5">Server media (backend/media/)</p>
+                {sources.media.length ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {sources.media.map((m) => (
+                      <button
+                        type="button"
+                        key={m.source_url}
+                        onClick={() => pickSource(m)}
+                        className={`px-2.5 py-1 rounded-md border text-xs transition ${
+                          form.source_url === m.source_url
+                            ? "bg-accent/20 border-accent text-white"
+                            : "bg-white/5 border-white/10 text-white hover:bg-white/10"
+                        }`}
+                        title={`${m.name} · ${fmtSize(m.size)}`}
+                      >
+                        {m.name}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-muted">No video files in backend/media/.</p>
+                )}
+              </div>
+
+              <div>
+                <p className="text-[11px] uppercase tracking-wide text-muted mb-1.5">Cloud storage (your bucket)</p>
+                {!sources.bucket.configured ? (
+                  <p className="text-[11px] text-muted">Not configured — set the <code>CINEMII_S3_*</code> env vars to list your bucket.</p>
+                ) : sources.bucket.error ? (
+                  <p className="text-[11px] text-red-400">{sources.bucket.error}</p>
+                ) : sources.bucket.items.length ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {sources.bucket.items.map((o) => (
+                      <button
+                        type="button"
+                        key={o.key}
+                        onClick={() => pickSource(o)}
+                        className={`px-2.5 py-1 rounded-md border text-xs transition ${
+                          form.source_url === o.source_url
+                            ? "bg-accent/20 border-accent text-white"
+                            : "bg-white/5 border-white/10 text-white hover:bg-white/10"
+                        }`}
+                        title={`${o.key} · ${fmtSize(o.size)}`}
+                      >
+                        {o.key}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-muted">Bucket is empty.</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Search Internet Archive — public-domain / CC films */}
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-muted mb-1 flex items-center gap-1.5">
+              <Film size={13} /> Search Internet Archive (public-domain / Creative-Commons films)
+            </label>
+            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
+              <div className="flex gap-2">
+                <input
+                  value={iaQ}
+                  onChange={(e) => setIaQ(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && iaSearch(e)}
+                  placeholder="Search archive.org movies…"
+                  className={inputCls}
+                />
+                <button type="button" onClick={iaSearch} disabled={iaSearching} className="px-4 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-semibold transition disabled:opacity-50">
+                  {iaSearching ? "…" : "Search"}
+                </button>
+              </div>
+
+              {iaResults.length > 0 && !iaItem && (
+                <div className="mt-2 space-y-1">
+                  {iaResults.map((r) => (
+                    <button type="button" key={r.identifier} onClick={() => iaOpen(r)} className="w-full text-left px-3 py-1.5 rounded-md bg-white/5 hover:bg-white/10 text-xs text-white transition flex items-center justify-between gap-2">
+                      <span className="truncate">{r.title} {r.year ? <span className="text-muted">({r.year})</span> : null}</span>
+                      <span className="text-[10px] text-muted shrink-0">{ccLabel(r.license_url) || "license?"}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {iaItem && (
+                <div className="mt-2">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-xs text-white font-semibold truncate">{iaItem.title}</p>
+                    <button type="button" onClick={() => setIaItem(null)} className="text-[11px] text-muted hover:text-white flex items-center gap-1">
+                      <X size={12} /> back
+                    </button>
+                  </div>
+                  {iaLoadingFiles ? (
+                    <p className="text-[11px] text-muted">Loading files…</p>
+                  ) : iaItem.files?.length ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {iaItem.files.map((f) => (
+                        <button
+                          type="button"
+                          key={f.source_url}
+                          onClick={() => iaPick(f, iaItem)}
+                          className={`px-2.5 py-1 rounded-md border text-xs transition ${
+                            form.source_url === f.source_url ? "bg-accent/20 border-accent text-white" : "bg-white/5 border-white/10 text-white hover:bg-white/10"
+                          }`}
+                          title={`${f.name} · ${fmtSize(f.size)}`}
+                        >
+                          {f.name}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-muted">No browser-playable video files in this item.</p>
+                  )}
+                  <a href={iaItem.details_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] text-accent hover:underline mt-2">
+                    <ExternalLink size={11} /> Verify rights on archive.org
+                  </a>
+                </div>
+              )}
+              <p className="text-[11px] text-muted mt-2">
+                Internet Archive hosts public-domain &amp; CC films. Confirm each item's license before publishing — not everything there is free to redistribute.
+              </p>
+            </div>
+          </div>
+
           <div className="sm:col-span-2">
             <label className="block text-xs text-muted mb-1">Source URL *</label>
             <input value={form.source_url} onChange={(e) => set("source_url", e.target.value)} className={inputCls} placeholder={form.source_type === "webtorrent" ? "magnet:?xt=…" : "https://…"} />
-            <p className="text-[11px] text-muted mt-1">{SOURCE_HINT[form.source_type]}</p>
+            <p className="text-[11px] text-muted mt-1">{SOURCE_HINT[form.source_type]} — or pick from your library / Archive above.</p>
           </div>
 
           <div>
